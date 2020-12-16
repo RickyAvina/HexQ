@@ -1,10 +1,11 @@
 import gym
 import numpy as np
 from gym import spaces
+import render.gui as gui
 
 
 class GridEnv(gym.Env):
-    def __init__(self, rows, cols, x_rooms, y_rooms, n_action):
+    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, display=True):
         super(GridEnv, self).__init__()
 
         self.rows = rows
@@ -18,11 +19,18 @@ class GridEnv(gym.Env):
                                                spaces.Discrete(x_rooms),
                                                spaces.Discrete(y_rooms)))
         self.action_space = spaces.Discrete(n_action)
-        self.exits = {(self.cols//2, self.rows//2, 0, 0)}
-
+        self.exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
+        self.display = display
+        if display:
+            gui.setup(600, 600, 5, 5, 2, 2, self.exits)
+            
     def step(self, action):
         self._take_action(action)
-
+        
+        if self.display:
+            gui.take_action(action)
+            self.render()
+        
         next_observation = self.agent_loc
 
         if np.array_equal(self.agent_loc, self.target_loc):
@@ -39,7 +47,7 @@ class GridEnv(gym.Env):
         return self.agent_loc
 
     def render(self):
-        raise NotImplementedError()
+        gui.render()
 
     def _init_env(self):
         self.agent_loc = (0, 0, 0, 0)
