@@ -2,6 +2,7 @@ import pygame
 
 WIDTH, HEIGHT = 600, 600
 ROWS, COLS = 4, 4
+X_ROOMS, Y_ROOMS = 2, 2
 
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
@@ -15,6 +16,20 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Checkers')
 
 
+grid_dict = {}
+
+
+class Agent:
+    def __init__(self, room, pos, color=BLUE):
+        self.room = room
+        self.pos = pos
+        self.color = color
+        self.radius = WIDTH//X_ROOMS//COLS//4
+
+    def render(self, win):
+        pygame.draw.circle(win, self.color, grid_dict[(self.room, self.pos)], self.radius, 0)
+
+
 class Square:
     def __init__(self, x, y, num, square_size, color=WHITE):
         self.num = num
@@ -26,7 +41,7 @@ class Square:
 
     def render(self, win):
         pygame.draw.rect(win, self.color, (self.x+BORDER_SIZE, self.y+BORDER_SIZE, self.square_size, self.square_size))
-        win.blit(self.label, (self.x+(self.square_size-FONT_SIZE)//2, self.y+(self.square_size-FONT_SIZE)//2))
+        win.blit(self.label, (self.x+BORDER_SIZE*2.5+(self.square_size-FONT_SIZE)//2, self.y+BORDER_SIZE+(self.square_size-FONT_SIZE)//2))
 
 
 class Room:
@@ -49,7 +64,10 @@ class Room:
         for r in range(self.rows):
             row = []
             for c in range(self.cols):
-                row.append(Square(self.x+c*self.square_size//self.cols, self.y+r*self.square_size//self.rows, count, self.square_size//self.cols, WHITE))
+                x = self.x+c*self.square_size//self.cols
+                y = self.y+r*self.square_size//self.rows
+                grid_dict[(self.num, count)] = (x+self.square_size//(self.cols*2), y+self.square_size//(self.rows*2))
+                row.append(Square(x, y, count, self.square_size//self.cols, WHITE))
                 count += 1
             self.grid.append(row)
 
@@ -70,7 +88,8 @@ class Container:
         self.grid = []
         self.room_size = WIDTH//x_rooms
         self._init_rooms()
-
+        self.agent = Agent(0, 0)
+    
     def _init_rooms(self):
         count = 0
         for r in range(self.y_rooms):
@@ -79,12 +98,14 @@ class Container:
                 row.append(Room(c*self.room_size, r*self.room_size, self.rows, self.cols, count, self.room_size))
                 count += 1
             self.grid.append(row)
-    
+
     def render(self, win):
         win.fill(BLUE)
         for row in range(self.y_rooms):
             for col in range(self.x_rooms):
                 self.grid[row][col].render(win)
+        self.agent.render(win)
+
 
 def main():
     run = True
@@ -98,7 +119,7 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
                 break
-   
+
         container.render(WIN)
         pygame.display.update()
 
