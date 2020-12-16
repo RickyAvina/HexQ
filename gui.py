@@ -20,11 +20,27 @@ grid_dict = {}
 
 
 class Agent:
-    def __init__(self, room, pos, color=BLUE):
+    def __init__(self, room, pos, rows, cols, color=BLUE):
         self.room = room
         self.pos = pos
+        self.rows = rows
+        self.cols = cols
         self.color = color
         self.radius = WIDTH//X_ROOMS//COLS//4
+
+    def move(self, action):
+        if (action == 0):  # left
+            self.pos -= 1
+        elif (action == 1):  # right
+            self.pos += 1
+        elif (action == 2):  # up
+            self.pos -= self.cols
+        elif (action == 3):  # down
+            self.pos += self.cols
+        else:
+            raise ValueError("Incorrect Value")
+
+        assert(self.pos >= 0 and self.pos < self.rows*self.cols)
 
     def render(self, win):
         pygame.draw.circle(win, self.color, grid_dict[(self.room, self.pos)], self.radius, 0)
@@ -80,7 +96,7 @@ class Room:
 
 
 class Container:
-    def __init__(self, rows, cols, x_rooms, y_rooms):
+    def __init__(self, rows, cols, x_rooms, y_rooms, exits):
         self.rows = rows
         self.cols = cols
         self.x_rooms = x_rooms
@@ -88,8 +104,9 @@ class Container:
         self.grid = []
         self.room_size = WIDTH//x_rooms
         self._init_rooms()
-        self.agent = Agent(0, 0)
-    
+        self.agent = Agent(0, 0, rows, cols)
+        self.exits = exits  # [(room, pos), ...]
+
     def _init_rooms(self):
         count = 0
         for r in range(self.y_rooms):
@@ -98,6 +115,9 @@ class Container:
                 row.append(Room(c*self.room_size, r*self.room_size, self.rows, self.cols, count, self.room_size))
                 count += 1
             self.grid.append(row)
+
+    def move_agent(self, action):
+        self.agent.move(action)
 
     def render(self, win):
         win.fill(BLUE)
