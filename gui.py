@@ -1,13 +1,14 @@
 import pygame
 
 WIDTH, HEIGHT = 600, 600
-ROWS, COLS = 4, 4
+ROWS, COLS = 5, 5
 X_ROOMS, Y_ROOMS = 2, 2
 
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 FONT_SIZE = 20
 BORDER_SIZE = 2
 
@@ -61,7 +62,7 @@ class Square:
 
 
 class Room:
-    def __init__(self, x, y, rows, cols, num, square_size, color=BLACK):
+    def __init__(self, x, y, rows, cols, num, square_size, color, exits):
         self.num = num
         self.rows = rows
         self.cols = cols
@@ -69,6 +70,7 @@ class Room:
         self.y = y
         self.color = color
         self.square_size = square_size
+        self.exits = exits
         self.grid = []
         self._init_grid()
 
@@ -83,7 +85,7 @@ class Room:
                 x = self.x+c*self.square_size//self.cols
                 y = self.y+r*self.square_size//self.rows
                 grid_dict[(self.num, count)] = (x+self.square_size//(self.cols*2), y+self.square_size//(self.rows*2))
-                row.append(Square(x, y, count, self.square_size//self.cols, WHITE))
+                row.append(Square(x, y, count, self.square_size//self.cols, GREEN if (self.num, count) in self.exits else WHITE))
                 count += 1
             self.grid.append(row)
 
@@ -102,17 +104,17 @@ class Container:
         self.x_rooms = x_rooms
         self.y_rooms = y_rooms
         self.grid = []
+        self.exits = exits  # {(room, pos), ...}
         self.room_size = WIDTH//x_rooms
         self._init_rooms()
         self.agent = Agent(0, 0, rows, cols)
-        self.exits = exits  # [(room, pos), ...]
 
     def _init_rooms(self):
         count = 0
         for r in range(self.y_rooms):
             row = []
             for c in range(self.x_rooms):
-                row.append(Room(c*self.room_size, r*self.room_size, self.rows, self.cols, count, self.room_size))
+                row.append(Room(c*self.room_size, r*self.room_size, self.rows, self.cols, count, self.room_size, BLACK, self.exits))
                 count += 1
             self.grid.append(row)
 
@@ -131,7 +133,8 @@ def main():
     run = True
     pygame.init()
     clock = pygame.time.Clock()
-    container = Container(ROWS, COLS, 2, 2)
+    exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
+    container = Container(ROWS, COLS, X_ROOMS, Y_ROOMS, exits)
 
     while run:
         clock.tick(FPS)
