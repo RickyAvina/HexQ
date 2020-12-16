@@ -24,10 +24,10 @@ class Agent:
         else:
             raise ValueError("Incorrect Value")
 
-        assert(self.pos >= 0 and self.pos < self.rows*self.cols, self.pos)
+        assert self.pos >= 0 and self.pos < self.rows*self.cols, self.pos
 
-    def render(self):
-        pygame.draw.circle(Container.WIN, self.color, Container.grid_dict[(self.room, self.pos)], self.radius, 0)
+    def render(self, agent_loc):
+        pygame.draw.circle(Container.WIN, self.color, Container.grid_dict[agent_loc], self.radius, 0)
 
 
 class Square:
@@ -112,13 +112,13 @@ class Container:
     def move_agent(self, action):
         self.agent.move(action)
 
-    def render(self):
+    def render(self, agent_loc):
         Container.WIN.fill(Consts.BLUE)
 
         for row in range(Container.Y_ROOMS):
             for col in range(Container.X_ROOMS):
                 self.grid[row][col].render()
-        self.agent.render()
+        self.agent.render(agent_loc)
 
 
 def setup(width, height, rows, cols, x_rooms, y_rooms, exits):
@@ -126,9 +126,7 @@ def setup(width, height, rows, cols, x_rooms, y_rooms, exits):
     WIN = pygame.display.set_mode((width, height))
     pygame.display.set_caption('Room Env')
     pygame.init()
-    clock = pygame.time.Clock()
     container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, exits)
-    run = True
 
 
 '''    while run:
@@ -143,11 +141,8 @@ def setup(width, height, rows, cols, x_rooms, y_rooms, exits):
     pygame.quit()
 '''
 
-def take_action(action):
-    container.move_agent(action)
-
-def render():
-    container.render()
+def render(agent_loc):
+    container.render(agent_loc)
     pygame.display.update()
 
 

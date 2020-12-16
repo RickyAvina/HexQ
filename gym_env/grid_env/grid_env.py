@@ -13,22 +13,36 @@ class GridEnv(gym.Env):
         self.x_rooms = x_rooms
         self.y_rooms = y_rooms
         self.target_loc = (0, 0, 1, 0)
-
+        # agent loc is (x, y, room_x, room_y)
         self.observation_space = spaces.Tuple((spaces.Discrete(cols),
                                                spaces.Discrete(rows),
                                                spaces.Discrete(x_rooms),
                                                spaces.Discrete(y_rooms)))
         self.action_space = spaces.Discrete(n_action)
-        self.exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
+        coor_exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
+        self.exits = {self.render_coor_to_loc(exit) for exit in coor_exits}
+
         self.display = display
         if display:
-            gui.setup(600, 600, 5, 5, 2, 2, self.exits)
-            
+            gui.setup(600, 600, 5, 5, 2, 2, coor_exits)
+
+    def render_coor_to_loc(self, render_coor):
+        col = render_coor[1] % self.cols
+        row = render_coor[1] // self.cols
+        x_room = render_coor[0] % self.x_rooms
+        y_room = render_coor[1] % self.y_rooms
+        return (col, row, x_room, y_room)
+
+    def loc_to_render_coor(self, loc):
+        ''' 4 tuple -> 2 tuple '''
+        room = loc[2]+loc[3]*self.x_rooms
+        pos = loc[0]+loc[1]*self.cols
+        return (room, pos)
+
     def step(self, action):
         self._take_action(action)
         
         if self.display:
-            gui.take_action(action)
             self.render()
         
         next_observation = self.agent_loc
@@ -47,16 +61,16 @@ class GridEnv(gym.Env):
         return self.agent_loc
 
     def render(self):
-        gui.render()
+        gui.render(self.loc_to_render_coor(self.agent_loc))
 
     def _init_env(self):
         self.agent_loc = (0, 0, 0, 0)
 
-    def _assert_valid_pos(self, loc):
-        assert loc[0] >= 0 and loc[0] < self.cols, self.agent_loc
-        assert loc[1] >= 0 and loc[1] < self.rows, self.agent_loc
-        assert loc[2] >= 0 and loc[2] < self.x_rooms, self.agent_loc
-        assert loc[3] >= 0 and loc[3] < self.y_rooms, self.agent_loc
+    def _assert_valid_pos(self, loc, action=None):
+        assert loc[0] >= 0 and loc[0] < self.cols, "{}, {}".format(self.agent_loc, action)
+        assert loc[1] >= 0 and loc[1] < self.rows, "{}, {}".format(self.agent_loc, action) 
+        assert loc[2] >= 0 and loc[2] < self.x_rooms, "{}, {}".format(self.agent_loc, action)
+        assert loc[3] >= 0 and loc[3] < self.y_rooms, "{}, {}".format(self.agent_loc, action)
 
     def _assert_valid_exits(self):
         # exits can't be on global edges
@@ -96,5 +110,5 @@ class GridEnv(gym.Env):
         else:
             raise ValueError("Incorrect Action")
 
-        self._assert_valid_pos(self.agent_loc)
+        self._assert_valid_pos(self.agent_loc, action)
 
