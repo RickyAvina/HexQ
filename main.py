@@ -3,7 +3,7 @@ import numpy as np
 import multiprocessing
 from multiprocessing import Manager
 import time
-
+from hexQ import HexQ
 
 render = True
 
@@ -16,15 +16,17 @@ def make_env(args, manager):
     return env
 
 def main(args):
+    hexQ = HexQ((0, 0))
+
     if render:
         multiprocessing.set_start_method("spawn")
         with Manager() as manager:
-            main_loop(args, manager)
+            main_loop(args, manager, hexQ)
     else:
-        main_loop(args, None)
+        main_loop(args, None, hexQ)
 
 
-def main_loop(args, manager):
+def main_loop(args, manager, hexQ):
     env = make_env(args, manager)
     s = env.reset()
 
@@ -32,7 +34,11 @@ def main_loop(args, manager):
         a = np.random.randint(4)
         s_p, r, d, _ = env.step(a)
         s = s_p
-        time.sleep(0.05)
+
+        if not hexQ.freq_discovered:
+            hexQ.explore(s)
+
+        #time.sleep(0.05)
 
 
 if __name__ == "__main__":

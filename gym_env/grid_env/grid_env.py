@@ -50,7 +50,7 @@ class GridEnv(gym.Env):
             # add pos to gui pos queue 
             self.pos_queue.append(self.loc_to_render_coor(self.agent_loc))
         
-        next_observation = self.agent_loc
+        next_observation = self.loc_to_render_coor(self.agent_loc) 
         if np.array_equal(self.agent_loc, self.target_loc):
             reward = 0
             self.target_reached = True
