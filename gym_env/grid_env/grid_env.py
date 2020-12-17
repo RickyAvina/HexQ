@@ -47,9 +47,9 @@ class GridEnv(gym.Env):
         self._take_action(action)
 
         if self.manager is not None:
-            # add pos to gui pos queue 
+            # add pos to gui pos queue
             self.pos_queue.append(self.loc_to_render_coor(self.agent_loc))
-        
+
         next_observation = self.loc_to_render_coor(self.agent_loc) 
         if np.array_equal(self.agent_loc, self.target_loc):
             reward = 0
@@ -60,6 +60,7 @@ class GridEnv(gym.Env):
         return (next_observation, reward, self.target_reached, {})
 
     def reset(self):
+        # TODO Use loc_to_render_coor in the reset
         self._init_env()
         return self.agent_loc
 

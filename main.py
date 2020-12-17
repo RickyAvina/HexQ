@@ -2,18 +2,20 @@ import gym
 import numpy as np
 import multiprocessing
 from multiprocessing import Manager
-import time
 from hexQ import HexQ
 
 render = True
 
 def make_env(args, manager):
-    import gym_env
+    # TODO Put make_env inside gym_env.__init__.py
+    # from gym_env import make_env
 
-    env = gym.make("GridEnv-v0", rows=5, cols=5,
-                    x_rooms=2, y_rooms=2, n_action=4,
-                    start=(0, 0), target_loc=(2, 15), manager=manager)
+    env = gym.make(
+        "GridEnv-v0", rows=5, cols=5,
+        x_rooms=2, y_rooms=2, n_action=4,
+        start=(0, 0), target_loc=(2, 15), manager=manager)
     return env
+
 
 def main(args):
     hexQ = HexQ((0, 0))
@@ -27,6 +29,7 @@ def main(args):
 
 
 def main_loop(args, manager, hexQ):
+    # TODO Minor: I would rename as train func
     env = make_env(args, manager)
     s = env.reset()
 
@@ -42,4 +45,6 @@ def main_loop(args, manager, hexQ):
 
 
 if __name__ == "__main__":
+    # TODO Use argparse for hyperparameter
+    # TODO requirements.txt and python virtualenv
     main(None)
