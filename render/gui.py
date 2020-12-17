@@ -1,7 +1,6 @@
 import pygame
 import render.render_consts as Consts
-import threading
-
+import multiprocessing
 
 class Agent:
     def __init__(self, room, pos, rows, cols, color=Consts.BLUE):
@@ -121,32 +120,38 @@ class Container:
         self.agent.render(agent_loc)
 
 
-def setup(width, height, rows, cols, x_rooms, y_rooms, exits):
+def setup(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue):
+    #multiprocessing.set_start_method("spawn")
+    p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue))
+    p1.start()
+
+def start(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue):
     global container
     WIN = pygame.display.set_mode((width, height))
     pygame.display.set_caption('Room Env')
     pygame.init()
     container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, exits)
 
-
-'''    while run:
+    clock = pygame.time.Clock()
+    while True:
         clock.tick(Consts.FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                run = False
                 break
-        container.render()
+
+        if len(action_queue) > 0:
+            pos = action_queue.pop(0)
+            container.render(pos)
+
         pygame.display.update()
 
     pygame.quit()
-'''
 
+''''
 def render(agent_loc):
     container.render(agent_loc)
     pygame.display.update()
 
-
-'''
 if __name__ == "__main__":
     exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
     setup(600, 600, 5, 5, 2, 2, exits)
