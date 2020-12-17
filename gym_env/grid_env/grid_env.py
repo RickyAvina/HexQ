@@ -6,17 +6,15 @@ import multiprocessing
 
 
 class GridEnv(gym.Env):
-    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, display, manager):
+    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, start, target_loc, manager=None):
         super(GridEnv, self).__init__()
-
         self.rows = rows
         self.cols = cols
         self.x_rooms = x_rooms
         self.y_rooms = y_rooms
-        self.target_loc = (0, 0, 1, 0)
-        self.manager = manager  # for multithreading
+        self.target_loc = self.render_coor_to_loc(target_loc)
+        self.target_reached = False
         self.pos_queue = manager.list()
-
         # agent loc is (x, y, room_x, room_y)
         self.observation_space = spaces.Tuple((spaces.Discrete(cols),
                                                spaces.Discrete(rows),
@@ -25,11 +23,12 @@ class GridEnv(gym.Env):
         self.action_space = spaces.Discrete(n_action)
         coor_exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
         self.exits = {self.render_coor_to_loc(exit) for exit in coor_exits}
-        print("gonna setup")
-        self.display = display
-        if display:
-            gui.setup(600, 600, 5, 5, 2, 2, coor_exits, self.pos_queue)
-            print("prolly not gonna set this")
+
+        self.manager = manager
+        if manager is not None:
+            gui.setup(width=600, height=600, rows=rows, cols=cols,
+                    x_rooms=x_rooms, y_rooms=y_rooms, target_loc=target_loc,
+                    exits=coor_exits, action_queue=self.pos_queue)
 
     def render_coor_to_loc(self, render_coor):
         col = render_coor[1] % self.cols
@@ -47,27 +46,22 @@ class GridEnv(gym.Env):
     def step(self, action):
         self._take_action(action)
 
-        if self.display:
-            # add action to gui action action queue
+        if self.manager is not None:
+            # add pos to gui pos queue 
             self.pos_queue.append(self.loc_to_render_coor(self.agent_loc))
-
+        
         next_observation = self.agent_loc
-
         if np.array_equal(self.agent_loc, self.target_loc):
             reward = 0
-            done = True
+            self.target_reached = True
         else:
             reward = -1
-            done = False
 
-        return (next_observation, reward, done, {})
+        return (next_observation, reward, self.target_reached, {})
 
     def reset(self):
         self._init_env()
         return self.agent_loc
-
-    def render(self):
-        gui.render(self.loc_to_render_coor(self.agent_loc))
 
     def _init_env(self):
         self.agent_loc = (0, 0, 0, 0)
@@ -93,28 +87,28 @@ class GridEnv(gym.Env):
                 assert(exit[3] < self.y_rooms-1)
 
     def _take_action(self, action):
-        if action == 0:  # left
-            if self.agent_loc[0] > 0:
-                self.agent_loc = (self.agent_loc[0]-1, self.agent_loc[1], self.agent_loc[2], self.agent_loc[3])
-            elif self.agent_loc in self.exits:
-                self.agent_loc = (self.cols-1, self.agent_loc[1], self.agent_loc[2]-1, self.agent_loc[3])
-        elif action == 1:  # right
-            if self.agent_loc[0] < self.cols-1:
-                self.agent_loc = (self.agent_loc[0]+1, self.agent_loc[1], self.agent_loc[2], self.agent_loc[3])
-            elif self.agent_loc in self.exits:
-                self.agent_loc = (0, self.agent_loc[1], self.agent_loc[2]+1, self.agent_loc[3])
-        elif action == 2:  # up
-            if self.agent_loc[1] > 0:
-                self.agent_loc = (self.agent_loc[0], self.agent_loc[1]-1, self.agent_loc[2], self.agent_loc[3])
-            elif self.agent_loc in self.exits:
-                self.agent_loc = (self.agent_loc[0], self.rows-1, self.agent_loc[2], self.agent_loc[3]-1)
-        elif action == 3:  # down
-            if self.agent_loc[1] < self.rows-1:
-                self.agent_loc = (self.agent_loc[0], self.agent_loc[1]+1, self.agent_loc[2], self.agent_loc[3])
-            elif self.agent_loc in self.exits:
-                self.agent_loc = (self.agent_loc[0], 0, self.agent_loc[2], self.agent_loc[3]+1)
-        else:
-            raise ValueError("Incorrect Action")
+        if not self.target_reached:
+            if action == 0:  # left
+                if self.agent_loc[0] > 0:
+                    self.agent_loc = (self.agent_loc[0]-1, self.agent_loc[1], self.agent_loc[2], self.agent_loc[3])
+                elif self.agent_loc in self.exits:
+                    self.agent_loc = (self.cols-1, self.agent_loc[1], self.agent_loc[2]-1, self.agent_loc[3])
+            elif action == 1:  # right
+                if self.agent_loc[0] < self.cols-1:
+                    self.agent_loc = (self.agent_loc[0]+1, self.agent_loc[1], self.agent_loc[2], self.agent_loc[3])
+                elif self.agent_loc in self.exits:
+                    self.agent_loc = (0, self.agent_loc[1], self.agent_loc[2]+1, self.agent_loc[3])
+            elif action == 2:  # up
+                if self.agent_loc[1] > 0:
+                    self.agent_loc = (self.agent_loc[0], self.agent_loc[1]-1, self.agent_loc[2], self.agent_loc[3])
+                elif self.agent_loc in self.exits:
+                    self.agent_loc = (self.agent_loc[0], self.rows-1, self.agent_loc[2], self.agent_loc[3]-1)
+            elif action == 3:  # down
+                if self.agent_loc[1] < self.rows-1:
+                    self.agent_loc = (self.agent_loc[0], self.agent_loc[1]+1, self.agent_loc[2], self.agent_loc[3])
+                elif self.agent_loc in self.exits:
+                    self.agent_loc = (self.agent_loc[0], 0, self.agent_loc[2], self.agent_loc[3]+1)
+            else:
+                raise ValueError("Incorrect Action")
 
         self._assert_valid_pos(self.agent_loc, action)
-

@@ -2,10 +2,9 @@ import pygame
 import render.render_consts as Consts
 import multiprocessing
 
+
 class Agent:
-    def __init__(self, room, pos, rows, cols, color=Consts.BLUE):
-        self.room = room
-        self.pos = pos
+    def __init__(self, rows, cols, color=Consts.BLUE):
         self.rows = rows
         self.cols = cols
         self.color = color
@@ -67,7 +66,8 @@ class Room:
                 x = self.x+c*self.square_size//self.cols
                 y = self.y+r*self.square_size//self.rows
                 Container.grid_dict[(self.num, count)] = (x+self.square_size//(self.cols*2), y+self.square_size//(self.rows*2))
-                row.append(Square(x, y, count, self.square_size//self.cols, Consts.GREEN if (self.num, count) in self.exits else Consts.WHITE))
+                square_color = Consts.GREEN if (self.num, count) in self.exits else (Consts.YELLOW if (self.num, count) == Container.target_loc else Consts.WHITE)
+                row.append(Square(x, y, count, self.square_size//self.cols, square_color))
                 count += 1
             self.grid.append(row)
 
@@ -80,14 +80,14 @@ class Room:
 
 
 class Container:
-
-    def __init__(self, win, width, height, rows, cols, x_rooms, y_rooms, exits):
+    def __init__(self, win, width, height, rows, cols, x_rooms, y_rooms, target_loc, exits):
         Container.WIDTH = width
         Container.HEIGHT = height
         Container.COLS = cols
         Container.ROWS = rows
         Container.X_ROOMS = x_rooms
         Container.Y_ROOMS = y_rooms
+        Container.target_loc = target_loc
         Container.WIN = win
         Container.grid_dict = {}
 
@@ -97,7 +97,7 @@ class Container:
         self.exits = exits  # {(room, pos), ...}
         self.room_size = width//x_rooms
         self._init_rooms()
-        self.agent = Agent(0, 0, rows, cols)
+        self.agent = Agent(rows, cols)
 
     def _init_rooms(self):
         count = 0
@@ -120,23 +120,24 @@ class Container:
         self.agent.render(agent_loc)
 
 
-def setup(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue):
-    #multiprocessing.set_start_method("spawn")
-    p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue))
+def setup(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue):
+    p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue))
     p1.start()
 
-def start(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue):
+def start(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue):
     global container
     WIN = pygame.display.set_mode((width, height))
     pygame.display.set_caption('Room Env')
     pygame.init()
-    container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, exits)
-
+    container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target_loc, exits)
+    run = True
     clock = pygame.time.Clock()
-    while True:
+
+    while run:
         clock.tick(Consts.FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                run = False
                 break
 
         if len(action_queue) > 0:
@@ -146,13 +147,3 @@ def start(width, height, rows, cols, x_rooms, y_rooms, exits, action_queue):
         pygame.display.update()
 
     pygame.quit()
-
-''''
-def render(agent_loc):
-    container.render(agent_loc)
-    pygame.display.update()
-
-if __name__ == "__main__":
-    exits = {(0, 14), (0, 22), (1, 10), (1, 22), (2, 2), (2, 14), (3, 2), (3, 10)}
-    setup(600, 600, 5, 5, 2, 2, exits)
-'''
