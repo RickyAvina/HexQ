@@ -1,4 +1,7 @@
+# Files
 *.swp
 *.pyc
 .DS_Store
+
+# Folders
 env/

@@ -19,7 +19,9 @@ class HexQ:
             for state in self.seq:
                 for i in range(len(state)):
                     freq[i].add(state[i])
-
+            
+            print("freq: {}".format(freq))
+            
             self.freq_discovered = True
             discovered_freq = np.argsort([len(arr) for arr in freq])
             print("discovered freq: {}".format(discovered_freq))

@@ -1,34 +1,25 @@
-import gym
 import numpy as np
 import multiprocessing
 from multiprocessing import Manager
-from hexQ import HexQ
+from gym_env import make_env
+from hexq.hexQ import HexQ
+
 
 render = True
 
-def make_env(args, manager):
-    # TODO Put make_env inside gym_env.__init__.py
-    # from gym_env import make_env
-
-    env = gym.make(
-        "GridEnv-v0", rows=5, cols=5,
-        x_rooms=2, y_rooms=2, n_action=4,
-        start=(0, 0), target_loc=(2, 15), manager=manager)
-    return env
-
 
 def main(args):
-    hexQ = HexQ((0, 0))
+    hQ = HexQ((0, 0))
 
     if render:
         multiprocessing.set_start_method("spawn")
         with Manager() as manager:
-            main_loop(args, manager, hexQ)
+            main_loop(args, manager, hQ)
     else:
-        main_loop(args, None, hexQ)
+        main_loop(args, None, hQ)
 
 
-def main_loop(args, manager, hexQ):
+def main_loop(args, manager, hQ):
     # TODO Minor: I would rename as train func
     env = make_env(args, manager)
     s = env.reset()
@@ -38,8 +29,9 @@ def main_loop(args, manager, hexQ):
         s_p, r, d, _ = env.step(a)
         s = s_p
 
-        if not hexQ.freq_discovered:
-            hexQ.explore(s)
+        if not hQ.freq_discovered:
+            hQ.explore(s)
+            print("Exploring {}".format(s))
 
         #time.sleep(0.05)
 

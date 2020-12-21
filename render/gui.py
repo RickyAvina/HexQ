@@ -65,8 +65,8 @@ class Room:
             for c in range(self.cols):
                 x = self.x+c*self.square_size//self.cols
                 y = self.y+r*self.square_size//self.rows
-                Container.grid_dict[(self.num, count)] = (x+self.square_size//(self.cols*2), y+self.square_size//(self.rows*2))
-                square_color = Consts.GREEN if (self.num, count) in self.exits else (Consts.YELLOW if (self.num, count) == Container.target_loc else Consts.WHITE)
+                Container.grid_dict[(count, self.num)] = (x+self.square_size//(self.cols*2), y+self.square_size//(self.rows*2))
+                square_color = Consts.GREEN if (count, self.num) in self.exits else (Consts.YELLOW if (count, self.num) == Container.target_loc else Consts.WHITE)
                 row.append(Square(x, y, count, self.square_size//self.cols, square_color))
                 count += 1
             self.grid.append(row)
