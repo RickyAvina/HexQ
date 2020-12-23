@@ -5,21 +5,26 @@ from gym_env import make_env
 from hexq.hexQ import HexQ
 import time
 
-render = True 
+render = False 
 
 
 def main(args):
     if render:
         multiprocessing.set_start_method("spawn")
         with Manager() as manager:
-            main_loop(args, manager)
+            train(args, manager)
     else:
-        main_loop(args, None)
+        train(args, None)
 
 
-def main_loop(args, manager):
+def train(args, manager):
     # TODO Minor: I would rename as train func
     env = make_env(args, manager)
+
+    hq = HexQ((0, 0), env)
+    hq.alg()
+
+    '''
     s = env.reset()
 
     while True:
@@ -27,10 +32,7 @@ def main_loop(args, manager):
         s_p, r, d, _ = env.step(a)
         #print("{}->{}->{}".format(s, a, s_p))
         s = s_p
-    
-    #hQ = HexQ((0, 0), env, 2)
-    #hQ.alg()
-
+    '''
 
 if __name__ == "__main__":
     # TODO Use argparse for hyperparameter

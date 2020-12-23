@@ -1,4 +1,3 @@
-import pygame
 import render.render_consts as Consts
 import multiprocessing
 
@@ -121,6 +120,7 @@ class Container:
 
 
 def setup(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue):
+    import pygame
     p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue))
     p1.start()
 
@@ -132,7 +132,6 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action
     container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target_loc, exits)
     run = True
     clock = pygame.time.Clock()
-    print("GOT HERE")
 
     while run:
         clock.tick(Consts.FPS)
@@ -146,5 +145,4 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action
             container.render(pos)
 
         pygame.display.update()
-
     pygame.quit()

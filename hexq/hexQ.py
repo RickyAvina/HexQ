@@ -3,13 +3,13 @@ import numpy as np
 
 
 class HexQ:
-    def __init__(self, start, env, state_dim):
+    def __init__(self, start, env):
         self.env = env
         self.start = start
-        self.exploration_steps = 1000
+        self.exploration_steps = 10000
         self.freq_discovered = False
         self.mdps = {}
-        self.state_dim = state_dim
+        self.state_dim = len(start)
         self._init_mdps()
 
     def _init_mdps(self):
@@ -40,10 +40,11 @@ class HexQ:
 
     def alg(self):
         #freq = self.find_freq()
-    
+
         import sys
         for e in range(self.state_dim):
             transition_probs, exits, entries = self.explore(self.mdps[e], e)
+            print("NORMAL EXIT")
             sys.exit()
 
     def explore(self, mdp, e):
@@ -53,13 +54,11 @@ class HexQ:
             # select actions from action set
             a = mdp.select_random_action()
             s_p, r, d, _ = self.env.step(a)
-            print("{}->{}->{}".format(s, a, s_p))
             mdp.add_trans(s, a, s_p)
             s = s_p
-        
-        #print("mdp counts: {}".format(mdp.trans_count))
-        #trans = mdp._count_to_probs()
-        #print("\nmdp trans: {}".format(trans.items()))
+
+        trans = mdp._count_to_probs()
+        print("s/a pairs: {}".format(len(trans.keys())))
         return None, None, None
 
 
@@ -104,7 +103,7 @@ class MDP:
             if s_a not in trans_probs:
                 trans_probs[s_a] = {}
 
-            total_count = sum(self.trans_count[s_a].values)
+            total_count = sum(self.trans_count[s_a].values())
             for s_p in self.trans_count[s_a]:
                 trans_probs[s_a][s_p] = self.trans_count[s_a][s_p] / total_count
 
