@@ -132,6 +132,7 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action
     container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target_loc, exits)
     run = True
     clock = pygame.time.Clock()
+    print("GOT HERE")
 
     while run:
         clock.tick(Consts.FPS)
