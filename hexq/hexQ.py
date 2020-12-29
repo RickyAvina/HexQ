@@ -3,9 +3,10 @@ import numpy as np
 
 
 class HexQ:
-    def __init__(self, start, env):
+    def __init__(self, env, start, target):
         self.env = env
         self.start = start
+        self.target = target
         self.exploration_steps = 10000
         self.freq_discovered = False
         self.mdps = {}
@@ -14,7 +15,7 @@ class HexQ:
 
     def _init_mdps(self):
         for i in range(self.state_dim):
-            self.mdps[i] = MDP()
+            self.mdps[i] = MDP(self.target)
 
         # initialize base mdp with primitive actions
         self.mdps[0].set_actions((0, 1, 2, 3))
@@ -58,8 +59,7 @@ class HexQ:
             s = s_p
 
         trans = mdp._count_to_probs()
-        print("s/a pairs: {}".format(len(trans.keys())))
-        return None, None, None
+        return trans, mdp.exits, mdp.entries
 
 
 class MDP:
@@ -68,11 +68,14 @@ class MDP:
     actions are a tuple
     '''
 
-    def __init__(self):
+    def __init__(self, target):
         self.states = set()
         self.actions = ()
         self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
         self.trans_probs = None
+        self.target = target
+        self.exits = set()
+        self.entries = set()
 
     def add_state(self, state):
         self.states.add(state)
@@ -87,14 +90,17 @@ class MDP:
         return random.choice(self.actions)
 
     def add_trans(self, s, a, s_p):
-        #print("receiving s: {}, a: {}, s_p: {}".format(s, a, s_p))
+        if s != self.target:
+            if (s, a) not in self.trans_count:
+                self.trans_count[(s, a)] = {s_p: 1}
+            elif s_p not in self.trans_count[(s, a)]:
+                self.trans_count[(s, a)][s_p] = 1
+            else:
+                self.trans_count[(s, a)][s_p] += 1
 
-        if (s, a) not in self.trans_count:
-            self.trans_count[(s, a)] = {s_p: 1}
-        elif s_p not in self.trans_count[(s, a)]:
-            self.trans_count[(s, a)][s_p] = 1
-        else:
-            self.trans_count[(s, a)][s_p] += 1
+            if s[1] != s_p[1]:  # exit/entry
+                self.exits.add(s)
+                self.entries.add(s_p)
 
     def _count_to_probs(self):
         trans_probs = {}

@@ -5,8 +5,9 @@ from gym_env import make_env
 from hexq.hexQ import HexQ
 import time
 
-render = False 
-
+render = False
+start = (0, 0)
+target = (15, 2)
 
 def main(args):
     if render:
@@ -18,10 +19,9 @@ def main(args):
 
 
 def train(args, manager):
-    # TODO Minor: I would rename as train func
     env = make_env(args, manager)
 
-    hq = HexQ((0, 0), env)
+    hq = HexQ(env=env, start=start, target=target)
     hq.alg()
 
     '''
