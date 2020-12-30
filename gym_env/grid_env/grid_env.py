@@ -3,6 +3,7 @@ import numpy as np
 from gym import spaces
 import render.gui as gui
 
+reset = False
 
 class GridEnv(gym.Env):
     def __init__(self, rows, cols, x_rooms, y_rooms, n_action, start, target_loc, manager=None):
@@ -25,7 +26,6 @@ class GridEnv(gym.Env):
                       (2, 2), (14, 2), (2, 3),
                       (10, 3)}
 
-
         self.manager = manager
         if manager is not None:
             self.pos_queue = manager.list()
@@ -43,8 +43,9 @@ class GridEnv(gym.Env):
         next_observation = self.agent_loc
         if np.array_equal(self.agent_loc, self.target_loc):
             reward = 0
-            self.target_reached = True
-            self.reset()
+            if reset:
+                self.target_reached = True
+                self.reset()
         else:
             reward = -1
 
