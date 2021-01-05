@@ -45,7 +45,10 @@ class HexQ:
         import sys
         for e in range(self.state_dim):
             transition_probs, exits, entries = self.explore(self.mdps[e], e)
-            self.find_MERs(self.mdps[e])
+            mers = self.find_MERs(self.mdps[e])
+            # from MERS, create sub-mpds
+            # time to create sub-mdps, that means we create an MDP
+            sub_mdps = self.create_sub_MDPs(self.mdps[e], mers)
             sys.exit()
 
     def explore(self, mdp, e):
@@ -73,6 +76,22 @@ class HexQ:
             self.bfs(mdp, states, s, mer)
             mers.append(mer)
 
+        return mers
+
+    def create_sub_MDPs(self, mdp, mers):
+        # for every MER, create sub MDP
+        # Pair exits with MERs
+        exit_states = {state[0] for state in mdp.exits}
+        sub_mdps = []
+        for mer in mers:
+            # create a sub-mdp for every exit
+            for state in exit_states:
+                if state in mer:
+                    sub_mdp = MDP(state)  # exit is the target
+                    sub_mdp.states = mer
+                    sub_mdps.append(sub_mdp)
+        return sub_mdps
+
     def bfs(self, mdp, states, s, mer):
         if s in states:
             states.remove(s)
@@ -82,14 +101,13 @@ class HexQ:
             if neighbor in states and (s, neighbor) not in mdp.exits:
                 self.bfs(mdp=mdp, states=states, s=neighbor, mer=mer)
 
-
 class MDP:
     '''
     states are a set
     actions are a tuple
     '''
 
-    def __init__(self, target):
+    def __init__(self, target=None):
         self.states = set()
         self.actions = ()
         self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
@@ -98,6 +116,13 @@ class MDP:
         self.target = target
         self.exits = set()  # {(s, s'), ...}
         self.entries = set()  # {s', ...}
+   
+    def __str__(self):
+        return self.__rep__()
+
+    def __rep__(self):
+        return "target: {} actions: {}\nexits: {}".format(self.target,
+                self.actions, self.exits)
 
     def add_state(self, state):
         self.states.add(state)
