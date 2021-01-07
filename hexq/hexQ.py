@@ -10,7 +10,7 @@ class HexQ:
         self.target = target
         self.exploration_steps = 10000
         self.freq_discovered = False
-        self.mdps = {}
+        self.mdps = {}  # level => [MDP,.. ]
         self.state_dim = len(start)
         self._init_mdps()
 
@@ -55,6 +55,7 @@ class HexQ:
         self.mdps[1] = sub_mdps
         
         # train each sub-mdp
+        self.train_sim_MDPs(mdps=self.mdps[1])
 
         transition_probs, exits, entries = self.explore(level=1)
 

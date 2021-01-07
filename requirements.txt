@@ -1,0 +1,10 @@
+cloudpickle==1.6.0
+future==0.18.2
+gym==0.17.3
+numpy==1.19.4
+opencv-python==4.4.0.46
+opengles==0.0.1
+pygame==2.0.0
+pyglet==1.5.0
+PyOpenGL==3.1.5
+scipy==1.5.4
