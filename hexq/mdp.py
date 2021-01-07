@@ -16,7 +16,7 @@ class MDP:
         self.level = level
 
         self.mer = set()
-        self.actions = {}   # R => exits (for primitives, key=value)
+        self.actions = set()   # R => exits (for primitives, key=value)
 
         self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
         # In future, could be a frozen dict {s: a: {s_p: count, s_p': count'}, a': {}}
@@ -27,14 +27,11 @@ class MDP:
         self.exits = set()  # {(s, a), ...}
         self.entries = set()  # {s', ...}
 
-    def __str__(self):
-        return self.__rep__()
-
-    def __rep__(self):
+    def __repr__(self):
         return "(MDP) level {} var {} actions {}".format(self.level, self.state_var, self.actions)
 
     def select_random_action(self):
-        return random.choice(self.actions)
+        return random.choice(tuple(self.actions))
 
     def add_trans(self, s, a, s_p):
         # transitions are deterministic after primitive level

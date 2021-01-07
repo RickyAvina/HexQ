@@ -16,10 +16,10 @@ class HexQ:
 
     def _init_mdps(self):
         MDP.env = self.env
-        root_mdp = MDP(0, None) 
+        root_mdp = MDP(0, None)
 
         # initialize base mdp with primitive actions
-        root_mdp.actions = {0: 0, 1: 1, 2: 2, 3: 3}
+        root_mdp.actions = {0, 1, 2, 3}
         self.mdps[0] = root_mdp
 
     def find_freq(self):
@@ -42,18 +42,21 @@ class HexQ:
         return sorted_order
 
     def alg(self):
-        import sys
-
         #freq = self.find_freq()
+
         # level zero (primitive actions)
         mdp = self.mdps[0]
-        transition_probs, exits, entries = self.explore(mdp=mdp, level=0)
+        transition_probs, exits, entries = self.explore(level=0)
 
         mers = self.find_MERs(mdp)
 
         # from MERS, create sub-mpds
-        sub_mdps = self.create_sub_MDPs(mdp, mers, 1)
+        sub_mdps = self.create_sub_MDPs(mdp=mdp, mers=mers, level=1)
+        self.mdps[1] = sub_mdps
         
+        # train each sub-mdp
+
+        transition_probs, exits, entries = self.explore(level=1)
 
         # train each sub-mdp, should yield a policy to reach each resp exit
         # an additional sub-mdp should be trained to navigate from exits to goal
@@ -75,17 +78,30 @@ class HexQ:
     def train_sub_mdps(self, mdp, sub_mdps):
         pass
 
-    def explore(self, mdp, level):
+    def explore(self, level):
         s = self.env.reset()
 
         for _ in range(self.exploration_steps):
             # select actions from action set
-            a = mdp.select_random_action()
             if level == 0:
+                mdp = self.mdps[0]
+                a = mdp.select_random_action()
                 s_p, r, d, _ = self.primitive_trans(mdp, s, a)
             else:
                 # multiple steps
-                s_p, r, d, _ = self.multistep_trans(mdp, s, a)
+                # figure out which MDP you're in
+                sub_mdp = None
+
+                for mdp in self.mdps[level]:
+                    if s in mdp.mer:
+                        sub_mdp = mdp
+                        break
+
+                assert sub_mdp is not None, "state {} does not belong to any sub MDP".format(s)
+                # pick action
+                a = sub_mdp.select_random_action()
+                
+                s_p, r, d, _ = self.multistep_trans(mdp=sub_mdp, s=s, a=a)
 
             s = s_p
 
@@ -128,7 +144,16 @@ class HexQ:
         # An action should take you to the exit, and then you take the exit action
 
         # sample random action from actions
-        pass
+        
+        # take action a which means
+        '''
+        while (s != a):
+            # selet actions from level-1 (in this case primitives)
+
+        '''
+        
+        s_p = a
+        return s_p, 0, False, None
 
     def find_MERs(self, mdp):
         ''' MERs are just states with deterministic intra-region transitions '''
@@ -162,20 +187,17 @@ class HexQ:
         # 2) One MDP per MER/exit pair. This is the one used in the HEXQ alg.
         # 3) One MDP per MER (with various exits), each action will be a diff exit policy
         sub_mdps = []
-
         # Picking arch 3
         for mer in mers:
             random_state = random.choice(tuple(mer))
             sub_mdp = MDP(level=level, state_var=random_state[level])
             sub_mdp.mer = mer
-            count = 0
 
             # find exits that correspond to this MER
             for state, action in mdp.exits:
                 if state in mer:
                     sub_mdp.exits.add((state, action))
-                    sub_mdp.actions[count] = state
-                    count += 1
+                    sub_mdp.actions.add(state)
 
-            sub_mdps.append(mdp)
+            sub_mdps.append(sub_mdp)
         return sub_mdps
