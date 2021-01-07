@@ -1,4 +1,4 @@
-from policy.SoftmaxPolicy import SoftmaxPolicy
+from policy.softmaxPolicy import SoftmaxPolicy
 
 
 class PolicyBase(object):
