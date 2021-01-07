@@ -5,3 +5,4 @@
 
 # Folders
 env/
+__pycache__/
