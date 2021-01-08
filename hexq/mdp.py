@@ -27,7 +27,7 @@ class MDP:
         self.exits = set()  # {(s, a), ...}
         self.entries = set()  # {s', ...}
 
-        self.policies = dict()  # {exit: weights}
+        self.policies = dict()  # {exit: Q-val dict}
 
     def __repr__(self):
         return "(MDP) level {} var {} actions {}".format(self.level, self.state_var, self.actions)

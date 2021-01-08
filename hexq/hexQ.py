@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from hexq.mdp import MDP
-from policy.agent import Agent
+import policy.QLearn
 
 
 class HexQ:
@@ -59,7 +59,8 @@ class HexQ:
         # train each sub-mdp
         self.train_sub_MDPs(self.mdps[1])
 
-        transition_probs, exits, entries = self.explore(level=1)
+        
+        #transition_probs, exits, entries = self.explore(level=1)
         # train each sub-mdp, should yield a policy to reach each resp exit
         # an additional sub-mdp should be trained to navigate from exits to goal
 
@@ -71,20 +72,7 @@ class HexQ:
 
     def train_sub_MDPs(self, mdps):
         for mdp in mdps:
-            # create a policy
-            #policy = Agent(env=self.env, n_hidden=8, tb_writer=tb_writer, log=log,
-            #               args=args, name="SoftmaxAgent({-})".format(mdp.level, mdp.state_var))
-            #train(agent=agent, env=env, log=log, tb_writer=tb_writer, args=args)
-            
-            '''
-            Train would look like this: 
-
-             for _ in training_steps:
-                collect_one_trajectory(agent)
-                if total_eps % num_samples == 0:
-                    agent.update_policy(total_eps)
-                    agent.clear_memory()
-             '''
+            policy.QLearn.qlearn(self.env, mdp, {0, 1, 2, 3})
 
     def explore(self, level):
         s = self.env.reset()
