@@ -21,5 +21,4 @@ print_header "Training network"
 cd $DIR
 python3.6 main.py \
 --prefix "" \
---n_hidden 128 \
 --mode "train"

@@ -49,20 +49,9 @@ def train(args, manager):
     '''
 
 if __name__ == "__main__":
-    # TODO Use argparse for hyperparameter
-    # TODO requirements.txt and python virtualenv
-    
     parser = argparse.ArgumentParser(description="")
 
     # Algorithm args
-    parser.add_argument(
-        "--n_hidden", default=128, type=int,
-        help="Number of hidden units")
-
-    parser.add_argument(
-       "--num_samples", default=1, type=int,
-       help="Number of samples to collect before\
-       updating policy")
 
     # Misc
     parser.add_argument(

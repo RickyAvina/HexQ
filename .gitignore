@@ -4,5 +4,6 @@
 .DS_Store
 
 # Folders
+logs/
 env/
 __pycache__/
