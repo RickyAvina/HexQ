@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from gym import spaces
 import render.gui as gui
+import random
 
 reset = False
 
@@ -54,9 +55,16 @@ class GridEnv(gym.Env):
     def reset(self):
         self._init_env()
         return self.agent_loc
+    
+    def reset_in(self, states):
+        self._init_env(states)
+        return self.agent_loc
 
-    def _init_env(self):
-        self.agent_loc = self.start
+    def _init_env(self, states=None):
+        if states is not None:
+            self.agent_loc = random.choice(tuple(states))
+        else:
+            self.agent_loc = self.start
 
     def _assert_valid_pos(self, loc, action=None):
         assert loc[0] >= 0 and loc[0] < self.cols*self.rows, \

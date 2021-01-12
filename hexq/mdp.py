@@ -20,7 +20,7 @@ class MDP:
 
         self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
         # In future, could be a frozen dict {s: a: {s_p: count, s_p': count'}, a': {}}
-        self.adj = {}
+        self.adj = set()
         self.trans_probs = None
 
         self.exit_pairs = set()  # {(s, s_p), ...}
@@ -30,7 +30,16 @@ class MDP:
         self.policies = dict()  # {exit: Q-val dict}
 
     def __repr__(self):
-        return "(MDP) level {} var {} actions {}".format(self.level, self.state_var, self.actions)
+        return "level {} var {} actions {}".format(self.level, self.state_var, self.actions)
+
+    def __eq__(self, other):
+        return self.level == other.level and self.state_var == other.state_var
+    
+    def __hash__(self):
+        return hash(str(self.level)+str(self.state_var))
+
+    def __lt__(self, other):
+        return self.state_var < other.state_var
 
     def select_random_action(self):
         return random.choice(tuple(self.actions))
