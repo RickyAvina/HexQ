@@ -9,8 +9,11 @@ class Exit:
     def __repr__(self):
         return "mdp: {} -> (action: {}) -> next_mdp: {}".format(self.mdp, self.action, self.next_mdp)
 
+    def __eq__(self, other):
+        return self.mdp == other.mdp and self.next_mdp == other.next_mdp
+
     def __hash__(self):
-        return hash(str(self.mdp)+str(self.action)+str(self.next_mdp))
+        return hash(self.mdp)+hash(self.next_mdp)
 
 class MDP:
     '''
@@ -48,12 +51,13 @@ class MDP:
         return self.level == other.level and self.state_var == other.state_var
 
     def __hash__(self):
-        return hash(str(self.level)+str(self.state_var))
+        return hash((self.level,)+self.state_var)
 
     def __lt__(self, other):
         return self.state_var < other.state_var
 
     def select_random_action(self):
+        assert len(self.actions) > 0, "actions are empty"
         return random.choice(tuple(self.actions))
 
     def add_trans(self, s, a, s_p):
