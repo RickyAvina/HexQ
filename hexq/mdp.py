@@ -1,5 +1,16 @@
 import random
 
+class Exit:
+    def __init__(self, mdp, action, next_mdp):
+        self.mdp = mdp
+        self.action = action
+        self.next_mdp = next_mdp
+
+    def __repr__(self):
+        return "mdp: {} -> (action: {}) -> next_mdp: {}".format(self.mdp, self.action, self.next_mdp)
+
+    def __hash__(self):
+        return hash(str(self.mdp)+str(self.action)+str(self.next_mdp))
 
 class MDP:
     '''
@@ -15,7 +26,8 @@ class MDP:
         self.state_var = state_var
         self.level = level
 
-        self.mer = set()
+        self.mer = set()  # mdps one level under
+        self.primitive_states = set()
         self.actions = set()   # R => exits (for primitives, key=value)
 
         self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
@@ -24,17 +36,17 @@ class MDP:
         self.trans_probs = None
 
         self.exit_pairs = set()  # {(s, s_p), ...}
-        self.exits = set()  # {(s, a), ...}
+        self.exits = set()  # {Exit}
         self.entries = set()  # {s', ...}
 
         self.policies = dict()  # {exit: Q-val dict}
 
     def __repr__(self):
-        return "level {} var {} actions {}".format(self.level, self.state_var, self.actions)
+        return "level {} var {}".format(self.level, self.state_var)
 
     def __eq__(self, other):
         return self.level == other.level and self.state_var == other.state_var
-    
+
     def __hash__(self):
         return hash(str(self.level)+str(self.state_var))
 

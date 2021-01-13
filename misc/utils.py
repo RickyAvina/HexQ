@@ -1,5 +1,6 @@
 import logging
 import random
+from hexq.mdp import Exit
 
 
 def set_logger(logger_name, log_file, level=logging.INFO):
@@ -40,8 +41,9 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p):
 
     # fill in exit/entries
     if s[mdp.level:] != s_p[mdp.level:]:
-        mdp.exit_pairs.add((s, s_p))
-        mdp.exits.add((s, a))
+        mdp.exits.add(Exit(mdp, a, adj_mdp))
+        #mdp.exit_pairs.add((s, s_p))
+        #mdp.exits.add((s, a))
         mdp.entries.add(s_p)
 
 def aggregate_mdp_properties(mdps):
@@ -62,13 +64,13 @@ def count_to_probs(mdp):
 
 def get_mdp(mdps, level, s):
     sub_mdp = None
-    
+
     for _sub_mdp in mdps[level]:
-        if s in _sub_mdp.mer:
+        if s in _sub_mdp.primitive_states:
             sub_mdp = _sub_mdp
             break
 
-    assert sub_mdp is not None, "state {} does not belong to any sub MDP".format(s)
+    assert sub_mdp is not None, "state {} does not belong to any sub MDP at level {}".format(s, level)
     return sub_mdp
 
 def max_qval(qvals, state):

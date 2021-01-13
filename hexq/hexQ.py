@@ -1,8 +1,8 @@
 import random
 import numpy as np
-from hexq.mdp import MDP
+from hexq.mdp import MDP, Exit
 import policy.QLearn
-from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties 
+from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties
 
 
 class HexQ:
@@ -35,6 +35,7 @@ class HexQ:
             primitive_mdp = MDP(level=0, state_var=state)
             primitive_mdp.actions = {0, 1, 2, 3}
             primitive_mdp.mer = {state}
+            primitive_mdp.primitive_states = {state}
             self.mdps[0].append(primitive_mdp)
 
         freq = [set() for _ in range(self.state_dim)]
@@ -46,36 +47,35 @@ class HexQ:
         return sorted_order
 
     def alg(self):
+        # find freq ordering of vars and initialize lowest level mdps
         freq = self.find_freq()
 
         # level zero (primitive actions)
         self.explore(level=0)
 
         # find Markov Equivelant Reigons
-        mers = self.find_MERs(1)
+        self.create_sub_mdps(1)
 
-        # from MERS, create sub-mpds
-#        sub_mdps = self.create_sub_MDPs(mdp=mdp, mers=mers, level=1)
-#        self.mdps[1] = sub_mdps
+        # level one (rooms)
+        #self.explore(level=1)
+    
+    '''
+    def create_sub_mdps(self, mers, level):
+        self.mdps[level] = []
 
-        # train each sub-mdp
-#        self.train_sub_MDPs(self.mdps[1])
+        for mer in mers:
+            state_var = next(iter(mer)).state_var[level]
+            mdp = MDP(state_var=state_var, level=level)
+            mdp.mer = mer
+            for sub_mdp in mer:
+                mdp.primitive_states.update(sub_mdp.primitive_states)
 
-        
-        #transition_probs, exits, entries = self.explore(level=1)
-        # train each sub-mdp, should yield a policy to reach each resp exit
-        # an additional sub-mdp should be trained to navigate from exits to goal
-
-        # create abstract actions and initation set for each sub-mdp
-        # this means that each sub-mdp should be numbered according to their room
-
-        # find value function for s, a pairs in sub_mdp
-        # Actions of next level = exits of current level
+            self.mdps[level].append(mdp)
+    '''
 
     def train_sub_MDPs(self, mdps):
         for mdp in mdps:
-            policy.QLearn.qlearn(env=self.env, mdps=self.mdps,
-                    mdp=mdp)
+            policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp)
 
     def explore(self, level):
         s = self.env.reset()
@@ -90,49 +90,45 @@ class HexQ:
 
         aggregate_mdp_properties(self.mdps[level])
 
-    def find_MERs(self, level):
+    def create_sub_mdps(self, level):
         mdps_copy = set(self.mdps[level-1].copy())
-        mers = []
+        mdps = []
 
         while len(mdps_copy) > 0:
             curr_mdp = random.choice(tuple(mdps_copy))
-            mer = self.bfs(mdps_copy, curr_mdp, level)
-            mers.append(mer)
-        return mers
+            #input("mdps: {}".format(len(mdps_copy)))
+            mer, exits = self.bfs(mdps_copy, curr_mdp, level)
+             
+            state_var = next(iter(mer)).state_var[1:]
+            mdp = MDP(level=level, state_var=state_var)
+            mdp.mer = mer
+            mdp.exits = exits
+            mdps.append(mdp)
 
-    def bfs(self, mdp_list, mdp, level, mer=None):
+        self.mdps[level] = mdps
+
+    def bfs(self, mdp_list, mdp, level, mer=None, exits=None):
         if mer is None:
             mer = set()
-       
-        #input("mdp: {}".format(mdp))
+        if exits is None:
+            exits = set()
+
         if mdp in mdp_list:
             mdp_list.remove(mdp)
         mer.add(mdp)
 
-        # input("{} mdps,  mer: {}".format(len(mdp_list), mer))
-        
         for neighbor in mdp.adj:
-            #input("curr: {} neighbor: {}".format(mdp.state_var, neighbor.state_var))
-            
-            if neighbor in mdp_list and neighbor.state_var[level:] == mdp.state_var[level:]:
-                self.bfs(mdp_list=mdp_list, mdp=neighbor, level=level, mer=mer)
+            if neighbor.state_var[level:] == mdp.state_var[level:]:
+                if neighbor in mdp_list:
+                    self.bfs(mdp_list=mdp_list, mdp=neighbor, level=level, mer=mer, exits=exits)
+            else:
+                for exit in mdp.exits:
+                    if neighbor == exit.next_mdp:  # found exit
+                        new_exit = Exit(mdp, exit, neighbor)
+                        exits.add(new_exit)
+                        break
 
-        return mer
-    '''
-    def bfs(self, mdp, states, s, mer=None):
-        if mer is None:
-            mer = set()
-
-        if s in states:
-            states.remove(s)
-        mer.add(s)
-
-        for neighbor in mdp.adj[s]:
-            if neighbor in states and (s, neighbor) not in mdp.exit_pairs:
-                self.bfs(mdp=mdp, states=states, s=neighbor, mer=mer)
-
-        return mer
-    '''
+        return mer, exits
 
     def create_sub_MDPs(self, mdp, mers, level):
         # Three architectures:
