@@ -1,19 +1,20 @@
 import random
+import policy.QLearn
 import numpy as np
 from hexq.mdp import MDP, Exit
-import policy.QLearn
-from misc.utils import exec_action, get_mdp, fill_mdp_properties,\
-                       aggregate_mdp_properties
+from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties
 
 
-class HexQ:
+class HexQ(object):
     def __init__(self, env, start, target):
         self.env = env
         self.start = start
-        self.target = target
-        self.exploration_steps = 10000
+        self.target = target  # TODO This varaible seems to be not used
+        self.exploration_steps = 10000  # TODO In the algorithm argparaser!
+                                        # TODO In HexQ page 81, they used 2000
         self.mdps = {}  # level => [MDP,.. ]
         self.state_dim = len(start)
+
         self._init_mdps()
 
     def _init_mdps(self):
@@ -21,26 +22,39 @@ class HexQ:
         self.mdps[0] = []
 
     def find_freq(self):
-        s = self.env.reset()
+        """Agent randomly explores env randomly for period of time.
+        After exploration, agent sorts variables based on their frequency of change.
+
+        Returns:
+            sorted_order (np.ndarray): Sorted order of variables
+
+        References:
+            Page 81 in the HexQ paper
+        """
+        state = self.env.reset()
+        # TODO IS it necessary to have both seq and states variables?
+        # Possibly, we can only save seq and to get states = set(seq)
         seq = []
         states = set()
 
         for _ in range(self.exploration_steps):
-            seq.append(s)
-            states.add(s)
-            a = np.random.randint(4)
-            s_p, r, d, _ = self.env.step(a)
-            s = s_p
+            seq.append(state)
+            states.add(state)
+            action = np.random.randint(4)  # TODO Use env.action_space instead of hard-coding
+            next_state, reward, done, _ = self.env.step(action)
+            state = next_state
+            # TODO I noticed that the done variable is not used
+            # When the agent arrives the "goal" exit, wouldn't the env return the done signal
+            # and then the env should reset()?!?!
 
         for state in states:
             primitive_mdp = MDP(level=0, state_var=state)
-            primitive_mdp.actions = {0, 1, 2, 3}
+            primitive_mdp.actions = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
             primitive_mdp.mer = {state}
             primitive_mdp.primitive_states = {state}
             self.mdps[0].append(primitive_mdp)
 
         freq = [set() for _ in range(self.state_dim)]
-
         for state in seq:
             for i in range(self.state_dim):
                 freq[i].add(state[i])
@@ -48,10 +62,17 @@ class HexQ:
         return sorted_order
 
     def alg(self):
-        # find freq ordering of vars and initialize lowest level mdps
+        # Find freq ordering of vars and initialize lowest level mdps
+        # TODO Variable seq is not used
+        # TODO that maybe sorting order needs to be opposite such that
+        # most frequent variable is in the first order
         freq = self.find_freq()
 
+        # TODO I guess line 2, 3, 4 in Table 5.1 are missing?! Woot woot?
+
         # level zero (primitive actions)
+        # TODO Looking at the paper, it seems like they refer to the most bottom level to be
+        # level 1 instead of level 0
         self.explore(level=0, exploration_steps=10000)
 
         # find Markov Equivalent Reigons

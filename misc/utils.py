@@ -1,3 +1,4 @@
+import git
 import logging
 import random
 from hexq.mdp import Exit
@@ -15,7 +16,8 @@ def set_logger(logger_name, log_file, level=logging.INFO):
     log.addHandler(fileHandler)
     log.addHandler(streamHandler)
 
-def set_log(args):
+
+def set_log(args, path="."):
     log = {}
 
     set_logger(
@@ -23,7 +25,15 @@ def set_log(args):
         log_file=r'{0}{1}'.format("./logs/", args.log_name))
     log[args.log_name] = logging.getLogger(args.log_name)
 
+    for arg, value in sorted(vars(args).items()):
+        log[args.log_name].info("%s: %r", arg, value)
+
+    repo = git.Repo(path)
+    log[args.log_name].info("Branch: {}".format(repo.active_branch))
+    log[args.log_name].info("Commit: {}".format(repo.head.commit))
+
     return log
+
 
 def fill_mdp_properties(mdps, mdp, s, a, s_p):
     # fill in MDPs adjacency set
@@ -48,6 +58,7 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p):
                     input("exit ({}) {}".format(exit.__hash__(), exit))
             if exit not in mdp.exits:
                 mdp.exits.add(exit)
+
 
 def aggregate_mdp_properties(mdps):
     for mdp in mdps:

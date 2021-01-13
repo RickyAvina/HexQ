@@ -1,6 +1,7 @@
 import random
 
-class Exit:
+
+class Exit(object):
     def __init__(self, mdp, action, next_mdp):
         self.mdp = mdp
         self.action = action
@@ -13,14 +14,14 @@ class Exit:
         return self.mdp == other.mdp and self.next_mdp == other.next_mdp
 
     def __hash__(self):
-        return hash(self.mdp)+hash(self.next_mdp)
+        return hash(self.mdp) + hash(self.next_mdp)
 
-class MDP:
+
+class MDP(object):
     '''
     states are a set
     actions are a tuple
     '''
-
     # states are shared across all MDPs
     states = set()
     env = None
@@ -51,7 +52,7 @@ class MDP:
         return self.level == other.level and self.state_var == other.state_var
 
     def __hash__(self):
-        return hash((self.level,)+self.state_var)
+        return hash((self.level,) + self.state_var)
 
     def __lt__(self, other):
         return self.state_var < other.state_var
