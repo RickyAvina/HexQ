@@ -53,9 +53,6 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p):
     if mdp.level == 0:
         if s[mdp.level:] != s_p[mdp.level:]:
             exit = Exit(mdp, a, adj_mdp)
-            if len(mdp.exits) > 4:
-                for exit in mdp.exits:
-                    input("exit ({}) {}".format(exit.__hash__(), exit))
             if exit not in mdp.exits:
                 mdp.exits.add(exit)
 
@@ -123,7 +120,7 @@ def select_random_action(mdps, mdp, s):
     else:
         sub_mdp = get_mdp(mdps=mdps, level=mdp.level-1, s=s)
         return random.choice(tuple(sub_mdp.actions))
-    
+
 def get_sub_action(mdps, mdp, s, a, p):
     if mdp.level == 0:
         return a, mdp
@@ -133,9 +130,7 @@ def get_sub_action(mdps, mdp, s, a, p):
         action = eps_greedy_action(s, qvals, sub_mdp, p)
         return action, sub_mdp
 
-#get sub_action(sub_mdp, s, a, p):
-
-def exec_action(env, mdps, mdp, state, action, p, s_ps=None, rs=None):
+def exec_action(env, mdps, mdp, state, action, s_ps=None, rs=None):
     '''
     action is {0, 1, 2, 3} if primitive and (state, action) if not
     '''
@@ -150,12 +145,9 @@ def exec_action(env, mdps, mdp, state, action, p, s_ps=None, rs=None):
     exit_mdp = action.mdp  # mdp(l0) -> action -> next_mdp(l0)
 
     while sub_mdp != exit_mdp:
-        #sub_mdp.get_a
-        a, sub_mdp = get_sub_action(mdps, mdp, state, action, p)
-        if mdp.level <= 1:
-            s_p, r, d, _ = env.step(a)
-            s_ps = s_p
-            rs += r
-        else:
-            exec_action(mdps, sub_mdp, state, a, 1, s_ps, rs)
+        s_p, r = exec_action(action, mdps, sub_mdp, state, action, s_ps, rs)
+        rs += r
+        s = s_p
+        sub_mdp = get_mdp(mdps, sub_mdp.level, s)
+
     return s_ps, rs

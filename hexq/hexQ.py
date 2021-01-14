@@ -78,16 +78,13 @@ class HexQ(object):
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
-        #for mdp in self.mdps[0]:
-        #    input("mdp: {} \nexits: {} \nactions: {}".format(mdp, len(mdp.exits), mdp.actions))
+        ''' train sub_mdps '''
+        self.train_sub_mdps(self.mdps[1])
 
         # level one (rooms)
-        self.explore(level=1)
+        #self.explore(level=1)
 
-        for mdp in self.mdps[1]:
-            input("mdp: {} \nexits: {} \nactions: {}".format(mdp, len(mdp.exits), mdp.actions))
-
-    def train_sub_MDPs(self, mdps):
+    def train_sub_mdps(self, mdps):
         for mdp in mdps:
             policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp)
 
@@ -97,12 +94,9 @@ class HexQ(object):
         for _ in range(self.exploration_steps if exploration_steps is None else exploration_steps):
             mdp = get_mdp(self.mdps, level, s)
             a = mdp.select_random_action()
-            #if level > 0:
-            #    input("mdp: {} action: {}".format(mdp, a))
-            s_p, r = exec_action(self.env, self.mdps, mdp, s, a, 0)
+            s_p, r = exec_action(self.env, self.mdps, mdp, s, a)
             fill_mdp_properties(self.mdps, mdp, s, a, s_p)
             s = s_p
-            #self.mdps[level].append(mdp)
 
         aggregate_mdp_properties(self.mdps[level])
 
@@ -142,7 +136,7 @@ class HexQ(object):
             else:
                 for exit in mdp.exits:
                     if neighbor == exit.next_mdp:  # found exit
-                        new_exit = Exit(mdp, exit, neighbor)
+                        new_exit = Exit(mdp, exit.action, neighbor)
                         exits.add(new_exit)
                         break
         return mer, exits

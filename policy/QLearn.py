@@ -1,15 +1,11 @@
 import random
-from misc.utils import get_mdp, get_prim_action
+from misc.utils import get_mdp, get_prim_action, exec_action
 
 
 lr = 1e-5
 exploration_steps = 2000
 beta = 0.5
 gamma = 0.9
-
-# {exit: {(s,a): q, (s, a'): q'}
-# {exit: {s:  {a: q, a': q},
-#        {s': {a: q, a': q'}}
 
 
 def qlearn(env, mdps,  mdp):
@@ -19,26 +15,52 @@ def qlearn(env, mdps,  mdp):
     mdp: sub-mdp to train
     '''
 
-    for exit in mdp.exits:
-        mdp.policies[exit] = dict()
+    '''
+    mdp.policies: {exit_mdp: {mdp:
+                                {a: q, a': q'}
+                              mdp':
+                                {a: q, a': q'}},
+                    exit_mdp': {...}}
+    '''
 
-        # find sub-mdps that overlap with mdp mer
-        for sub_mdp in mdps[mdp.level-1]:
-            if sub_mdp.mer.issubset(mdp.mer):
-                mdp.policies[exit][sub_mdp.state_var] = dict()
-                for action in sub_mdp.actions:
-                    mdp.policies[exit][sub_mdp.state_var][action] = 0   # Q(s, a) = 0
+    for exit in mdp.exits:
+        mdp.policies[exit.mdp] = dict()
+
+        for sub_mdp in mdp.mer:
+            mdp.policies[exit.mdp][sub_mdp] = dict()
+            for action in sub_mdp.actions:
+                mdp.policies[exit.mdp][sub_mdp][action] = 0  # Q(s, a) = 0
 
         # initialize pos in MER
-        s = env.reset_in(mdp.mer)
-        for step in range(exploration_steps):
-            while s != exit[0]:
-                a = get_prim_action(mdps=mdps, mdp=mdp, qvals=mdp.policies[exit],
-                                    s=s, a=exit, p=0.2)
-                s_p, r, d, _ = env.step(a)
-                input("{}->{}->{}".format(s, a, s_p))
-                s = s_p
+        s = env.reset_in(mdp.primitive_states)
 
-            # update step
-            #max_q = max_qval(qvals, s_p)
-            #qvals[s][a] = (1-beta)*qvals[s][a] + beta*(r+gamma*max_q)
+        for step in range(exploration_steps):
+            # pick lower level action with eps_greedy
+            sub_mdp = get_mdp(mdps, mdp.level-1, s)
+            cum_reward = 0
+            while sub_mdp != exit.mdp:
+                a = get_action(sub_mdp, 0.2, mdp.policies[exit.mdp])  # right now hard coded probability, should decay
+                s_p, r = exec_action(env, mdps, sub_mdp, s, a)
+                cum_reward += r
+                s = s_p
+                next_sub_mdp = get_mdp(mdps, mdp.level-1, s)
+                update_q_vals(mdp.policies[exit.mdp], sub_mdp, a, next_sub_mdp, r)
+                sub_mdp = next_sub_mdp
+
+            input("cumm reward: {}".format(cum_reward))
+
+def max_q(exit_qvals, mdp):
+    assert mdp in exit_qvals, "{} not in qvals[exit]!".format(mdp)
+    return max(exit_qvals[mdp], key=lambda k: exit_qvals[mdp].get(k))
+
+
+def get_action(mdp, p, exit_qvals):
+    if random.random() > p:
+        return random.choice(tuple(mdp.actions))
+    else:
+        # return choice with highest q val
+        return max_q(exit_qvals, mdp)
+
+def update_q_vals(exit_qvals, sub_mdp, a, next_sub_mdp, r):
+    max_future_q = max_q(exit_qvals, next_sub_mdp)
+    exit_qvals[sub_mdp][a] = (1-beta)*exit_qvals[sub_mdp][a] + beta*(r + gamma*max_future_q)
