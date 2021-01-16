@@ -47,9 +47,9 @@ class GridEnv(gym.Env):
                       exits=self.exits, action_queue=self.pos_queue)
 
     def target_reached(self):
-        if self.state_dim == 1:
+        if len(self.target) == 1:
             return self.agent_loc[1:] == self.target
-        elif self.state_dim == 2:
+        elif len(self.target) == 2:
             return self.agent_loc == self.target
         else:
             raise ValueError("state dim: {} not supported!".format(self.state_dim))
@@ -64,7 +64,6 @@ class GridEnv(gym.Env):
         next_observation = self.agent_loc
         target_reached = False
         if self.target_reached():
-            print("target reached!")
             reward = 0
             target_reached = True
             self.reset()
@@ -73,19 +72,26 @@ class GridEnv(gym.Env):
 
         return (next_observation, reward, target_reached, {})
 
+    def get_random_start(self, states=None):
+        # pick random starting point that isn't in target
+        if states is not None:
+            return random.choice(tuple(states))
+
+        if len(self.target) == 1:
+            rand_room = random_exclude({self.target[0]}, 0, self.x_rooms*self.y_rooms-1)
+            rand_pos = random.randint(0, self.rows*self.cols-1)
+        else:
+            rand_room = random.randint(0, self.x_rooms*self.y_rooms-1)
+            rand_pos = random_exclude({self.target[0]}, 0, self.rows*self.cols-1)
+        return (rand_pos, rand_room)
+
     def reset(self):
-        self._init_env()
+        self.agent_loc = self.get_random_start()
         return self.agent_loc
 
     def reset_in(self, states):
-        self._init_env(states)
+        self.agent_loc = self.get_random_start(states)
         return self.agent_loc
-
-    def _init_env(self, states=None):
-        if states is not None:
-            self.agent_loc = random.choice(tuple(states))
-        else:
-            self.agent_loc = self.start
 
     def _assert_valid_pos(self, loc, action=None):
         assert loc[0] >= 0 and loc[0] < self.cols * self.rows, \

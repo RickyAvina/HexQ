@@ -74,12 +74,13 @@ class HexQ(object):
         # level zero (primitive actions)
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
-        self.explore(level=0, exploration_steps=10000)
+        self.explore(level=0, exploration_steps=100000000)
         #input("manager: {}".format(self.env.manager))
 
         # render exits
         if self.env.manager is not None:
             gui.set_exits({(0,0)})
+
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
