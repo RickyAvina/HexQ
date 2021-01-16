@@ -8,8 +8,11 @@ from misc.utils import set_log
 from tensorboardX import SummaryWriter
 
 
-render = False  # TODO Please use argparser instead of global variable
-
+# Should move this to a Constants file:
+exits = {(14, 0), (22, 0),
+         (10, 1), (22, 1),
+         (2, 2), (14, 2), (2, 3),
+         (10, 3)}
 
 def main(args):
     # Create directories
@@ -24,7 +27,13 @@ def main(args):
     log = set_log(args)
     tb_writer = SummaryWriter('./logs/tb_{}'.format(args.log_name))
 
-    if render:
+    if args.start is not None:
+        args.start = tuple(args.start)
+
+    args.target = tuple(args.target)
+    args.exits = exits
+
+    if args.render:
         multiprocessing.set_start_method("spawn")
         with Manager() as manager:
             train(args, manager)
@@ -38,19 +47,8 @@ def train(args, manager):
     env = make_env(args, manager)
 
     # Initialize HexQ algorithm
-    hq = HexQ(env=env, start=(0, 0), target=(15, 2))
+    hq = HexQ(env=env, state_dim=args.state_dim, start=args.start, target=args.target)
     hq.alg()
-
-    '''
-    s = env.reset()
-
-    while True:
-        a = np.random.randint(4)
-        s_p, r, d, _ = env.step(a)
-        #print("{}->{}->{}".format(s, a, s_p))
-        s = s_p
-    '''
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HeXQ")
@@ -68,6 +66,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seed", default=0, type=int,
         help="Sets Gym, PyTorch, and Numpy seeds")
+
+    parser.add_argument('--state_dim', default=2, type=int,
+        help="Number of dimensions in the environment")
+    parser.add_argument('--start', nargs='*', type=int,
+        help="Starting location")
+    parser.add_argument('--target', nargs='*', type=int,
+        help="Target position, use 2 variables to specify a position in room,\
+              and 1 variable to specify a whole room")
+    parser.add_argument('--render', action='store_true',
+        help="If True, render GUI")
+
     # TODO For binary variable, please consider the following argparse example:
     # parser.add_argument(
     #     "--use-lstm", action="store_true",

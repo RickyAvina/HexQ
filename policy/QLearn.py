@@ -48,6 +48,7 @@ def qlearn(env, mdps,  mdp):
                 sub_mdp = next_sub_mdp
 
             input("cumm reward: {}".format(cum_reward))
+            input("q values: {}".format(mdp.policies[exit.mdp]))
 
 def max_q(exit_qvals, mdp):
     assert mdp in exit_qvals, "{} not in qvals[exit]!".format(mdp)

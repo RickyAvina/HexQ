@@ -3,17 +3,18 @@ import policy.QLearn
 import numpy as np
 from hexq.mdp import MDP, Exit
 from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties
+import render.gui as gui
 
 
 class HexQ(object):
-    def __init__(self, env, start, target):
+    def __init__(self, env, state_dim, start, target):
         self.env = env
         self.start = start
         self.target = target  # TODO This varaible seems to be not used
         self.exploration_steps = 10000  # TODO In the algorithm argparaser!
                                         # TODO In HexQ page 81, they used 2000
         self.mdps = {}  # level => [MDP,.. ]
-        self.state_dim = len(start)
+        self.state_dim = state_dim
 
         self._init_mdps()
 
@@ -74,7 +75,11 @@ class HexQ(object):
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
         self.explore(level=0, exploration_steps=10000)
+        #input("manager: {}".format(self.env.manager))
 
+        # render exits
+        if self.env.manager is not None:
+            gui.set_exits({(0,0)})
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 

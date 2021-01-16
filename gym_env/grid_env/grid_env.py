@@ -3,54 +3,75 @@ import numpy as np
 from gym import spaces
 import render.gui as gui
 import random
-
-reset = False   # TODO Why reset is False?! Woot woot?
+from misc.utils import random_exclude
 
 
 class GridEnv(gym.Env):
-    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, start, target_loc, manager=None):
+    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, state_dim, target, exits, start=None, manager=None):
+        '''
+        target loc: tuple representing target. (1,2,3) would mean Floor 3, Room 2, pos 1
+                    (2, 3) would mean room 2, floor 3
+
+        exits: set of tuples used for graphical rendering 
+        '''
         super(GridEnv, self).__init__()
         self.rows = rows
         self.cols = cols
         self.x_rooms = x_rooms
         self.y_rooms = y_rooms
-        self.start = start
-        self.target_loc = target_loc
-        self.target_reached = False
-        # agent loc is (x, y, room_x, room_y)
+        self.state_dim = state_dim
+        if start is None:
+            # pick random starting point that isn't in target
+            rand_pos = random.randint(0, rows*cols-1)
+            if state_dim == 1:
+                rand_room = random_exclude({target[0]}, 0, x_rooms*y_rooms-1)
+            else:
+                rand_room = random.randint(0, x_rooms*y_rooms-1)
+            self.start = (rand_pos, rand_room)
+        else:
+            self.start = start
+        self.target = target
         self.observation_space = spaces.Tuple((spaces.Discrete(cols),
                                                spaces.Discrete(rows),
                                                spaces.Discrete(x_rooms),
                                                spaces.Discrete(y_rooms)))
         self.action_space = spaces.Discrete(n_action)
-        self.exits = {(14, 0), (22, 0),
-                      (10, 1), (22, 1),
-                      (2, 2), (14, 2), (2, 3),
-                      (10, 3)}
+        self.exits = exits
+        self.primitive_exits = set()  # exits should be discovered
 
         self.manager = manager
         if manager is not None:
             self.pos_queue = manager.list()
             gui.setup(width=600, height=600, rows=rows, cols=cols,
-                      x_rooms=x_rooms, y_rooms=y_rooms, target_loc=target_loc,
+                      x_rooms=x_rooms, y_rooms=y_rooms, target=target,
                       exits=self.exits, action_queue=self.pos_queue)
 
+    def target_reached(self):
+        if self.state_dim == 1:
+            return self.agent_loc[1:] == self.target
+        elif self.state_dim == 2:
+            return self.agent_loc == self.target
+        else:
+            raise ValueError("state dim: {} not supported!".format(self.state_dim))
+
     def step(self, action):
+        assert self.agent_loc is not None, "agent loc is None!"
         self._take_action(action)
 
         if self.manager is not None:
             self.pos_queue.append(self.agent_loc)  # Add pos to gui pos queue
 
         next_observation = self.agent_loc
-        if np.array_equal(self.agent_loc, self.target_loc):
+        target_reached = False
+        if self.target_reached():
+            print("target reached!")
             reward = 0
-            if reset:
-                self.target_reached = True
-                self.reset()
+            target_reached = True
+            self.reset()
         else:
             reward = -1
 
-        return (next_observation, reward, self.target_reached, {})
+        return (next_observation, reward, target_reached, {})
 
     def reset(self):
         self._init_env()

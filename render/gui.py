@@ -1,5 +1,6 @@
 import render.render_consts as Consts
 import multiprocessing
+import pygame
 
 
 class Agent:
@@ -42,7 +43,7 @@ class Square:
 
 
 class Room:
-    def __init__(self, x, y, rows, cols, num, square_size, color, exits):
+    def __init__(self, x, y, rows, cols, num, square_size, exits, color=Consts.BLACK):
         self.num = num
         self.rows = rows
         self.cols = cols
@@ -65,7 +66,13 @@ class Room:
                 x = self.x+c*self.square_size//self.cols
                 y = self.y+r*self.square_size//self.rows
                 Container.grid_dict[(count, self.num)] = (x+self.square_size//(self.cols*2), y+self.square_size//(self.rows*2))
-                square_color = Consts.GREEN if (count, self.num) in self.exits else (Consts.YELLOW if (count, self.num) == Container.target_loc else Consts.WHITE)
+                if (count, self.num) in self.exits:
+                    square_color = Consts.GREEN
+                else:
+                    if len(Container.target) == 1:  # room
+                        square_color = Consts.YELLOW if self.num == Container.target[0] else Consts.WHITE
+                    else:  # pos in room
+                        square_color = Consts.YELLOW if (count, self.num) == Container.target else Consts.WHITE
                 row.append(Square(x, y, count, self.square_size//self.cols, square_color))
                 count += 1
             self.grid.append(row)
@@ -79,14 +86,14 @@ class Room:
 
 
 class Container:
-    def __init__(self, win, width, height, rows, cols, x_rooms, y_rooms, target_loc, exits):
+    def __init__(self, win, width, height, rows, cols, x_rooms, y_rooms, target, exits):
         Container.WIDTH = width
         Container.HEIGHT = height
         Container.COLS = cols
         Container.ROWS = rows
         Container.X_ROOMS = x_rooms
         Container.Y_ROOMS = y_rooms
-        Container.target_loc = target_loc
+        Container.target = target
         Container.WIN = win
         Container.grid_dict = {}
 
@@ -103,7 +110,7 @@ class Container:
         for r in range(Container.Y_ROOMS):
             row = []
             for c in range(Container.X_ROOMS):
-                row.append(Room(c*self.room_size, r*self.room_size, self.rows, self.cols, count, self.room_size, Consts.BLACK, self.exits))
+                row.append(Room(c*self.room_size, r*self.room_size, self.rows, self.cols, count, self.room_size, self.exits, Consts.BLACK))
                 count += 1
             self.grid.append(row)
 
@@ -119,17 +126,16 @@ class Container:
         self.agent.render(agent_loc)
 
 
-def setup(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue):
-    import pygame
-    p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue))
+def setup(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue):
+    p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue))
     p1.start()
 
-def start(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action_queue):
+def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue):
     global container
     WIN = pygame.display.set_mode((width, height))
     pygame.display.set_caption('Room Env')
     pygame.init()
-    container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target_loc, exits)
+    container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target, exits)
     run = True
     clock = pygame.time.Clock()
 
@@ -139,10 +145,25 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target_loc, exits, action
             if event.type == pygame.QUIT:
                 run = False
                 break
-
-        if len(action_queue) > 0:
-            pos = action_queue.pop(0)
-            container.render(pos)
-
+        try:
+            if len(action_queue) > 0:
+                pos = action_queue.pop(0)
+                container.render(pos)
+        except:
+            print("action queue: {}".format(action_queue))
         pygame.display.update()
     pygame.quit()
+
+'''
+def set_exits(exits):
+    global container
+
+    for exit in exits:
+        room_row = exit[0] // container.cols
+        room_col = exit[0] % container.cols
+        room = container.grid[room_row][room_col]
+        pos_row = exit[1] // container.cols
+        pos_col = exit[1] % container.cols
+        square = room.grid[pos_row][pos_col]
+        square.color = Consts.GREEN  # change color of square to indicate exit
+'''
