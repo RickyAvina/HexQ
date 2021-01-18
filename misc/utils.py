@@ -57,8 +57,9 @@ def str2bool(v):
 def fill_mdp_properties(mdps, mdp, s, a, s_p):
     # fill in MDPs adjacency set
 
-    adj_mdp = get_mdp(mdps, mdp.level, s_p)
-    mdp.adj.add(adj_mdp)
+    if s != s_p:
+        adj_mdp = get_mdp(mdps, mdp.level, s_p)
+        mdp.adj.add(adj_mdp)
 
     # fill in MDPs transition count
     if (s, a) not in mdp.trans_count:
@@ -149,7 +150,7 @@ def get_sub_action(mdps, mdp, s, a, p):
         action = eps_greedy_action(s, qvals, sub_mdp, p)
         return action, sub_mdp
 
-def exec_action(env, mdps, mdp, state, action, s_ps=None, rs=None):
+def exec_action(env, mdps, mdp, state, action, s_ps=None, rs=None, ds=None):
     '''
     action is {0, 1, 2, 3} if primitive and (state, action) if not
     '''
@@ -158,15 +159,15 @@ def exec_action(env, mdps, mdp, state, action, s_ps=None, rs=None):
 
     if mdp.level == 0:
         s_p, r, d, _ = env.step(action)
-        return s_p, r
+        return s_p, r, d
 
     sub_mdp = get_mdp(mdps, mdp.level-1, state)
     exit_mdp = action.mdp  # mdp(l0) -> action -> next_mdp(l0)
 
     while sub_mdp != exit_mdp:
-        s_p, r = exec_action(action, mdps, sub_mdp, state, action, s_ps, rs)
+        s_p, r, d, _ = exec_action(action, mdps, sub_mdp, state, action, s_ps, rs, ds)
         rs += r
         s = s_p
         sub_mdp = get_mdp(mdps, sub_mdp.level, s)
 
-    return s_ps, rs
+    return s_ps, rs, ds

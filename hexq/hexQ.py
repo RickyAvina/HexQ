@@ -3,7 +3,7 @@ import policy.QLearn
 import numpy as np
 from hexq.mdp import MDP, Exit
 from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties
-import render.gui as gui
+from render.gui import change_title
 
 
 class HexQ(object):
@@ -33,21 +33,18 @@ class HexQ(object):
             Page 81 in the HexQ paper
         """
         state = self.env.reset()
-        # TODO IS it necessary to have both seq and states variables?
-        # Possibly, we can only save seq and to get states = set(seq)
-        seq = []
-        states = set()
+        seq = [state]
 
         for _ in range(self.exploration_steps):
-            seq.append(state)
-            states.add(state)
             action = np.random.randint(4)  # TODO Use env.action_space instead of hard-coding
             next_state, reward, done, _ = self.env.step(action)
-            state = next_state
-            # TODO I noticed that the done variable is not used
-            # When the agent arrives the "goal" exit, wouldn't the env return the done signal
-            # and then the env should reset()?!?!
+            seq.append(next_state)
+            if done:
+                state = self.env.reset()
+            else:
+                state = next_state
 
+        states = set(seq)
         for state in states:
             primitive_mdp = MDP(level=0, state_var=state)
             primitive_mdp.actions = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
@@ -74,17 +71,17 @@ class HexQ(object):
         # level zero (primitive actions)
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
-        self.explore(level=0, exploration_steps=100000000)
-        #input("manager: {}".format(self.env.manager))
+        change_title("explore")
 
-        # render exits
-        if self.env.manager is not None:
-            gui.set_exits({(0,0)})
-
+        self.explore(level=0, exploration_steps=2000)
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
+        for mdp in self.mdps[1]:
+            input("mdp: {} prim states: {}".format(mdp, mdp.primitive_states))
+
         ''' train sub_mdps '''
+        change_title("train sub_mdps") 
         self.train_sub_mdps(self.mdps[1])
 
         # level one (rooms)
@@ -100,9 +97,12 @@ class HexQ(object):
         for _ in range(self.exploration_steps if exploration_steps is None else exploration_steps):
             mdp = get_mdp(self.mdps, level, s)
             a = mdp.select_random_action()
-            s_p, r = exec_action(self.env, self.mdps, mdp, s, a)
+            s_p, r, d = exec_action(self.env, self.mdps, mdp, s, a)
             fill_mdp_properties(self.mdps, mdp, s, a, s_p)
-            s = s_p
+            if d:
+                s = self.env.reset()
+            else:
+                s = s_p
 
         aggregate_mdp_properties(self.mdps[level])
 

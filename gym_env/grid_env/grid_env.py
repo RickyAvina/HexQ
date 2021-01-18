@@ -12,32 +12,26 @@ class GridEnv(gym.Env):
         target loc: tuple representing target. (1,2,3) would mean Floor 3, Room 2, pos 1
                     (2, 3) would mean room 2, floor 3
 
-        exits: set of tuples used for graphical rendering 
+        exits: set of tuples that define primitive exits
         '''
+
         super(GridEnv, self).__init__()
         self.rows = rows
         self.cols = cols
         self.x_rooms = x_rooms
         self.y_rooms = y_rooms
         self.state_dim = state_dim
+        self.target = target
         if start is None:
-            # pick random starting point that isn't in target
-            rand_pos = random.randint(0, rows*cols-1)
-            if state_dim == 1:
-                rand_room = random_exclude({target[0]}, 0, x_rooms*y_rooms-1)
-            else:
-                rand_room = random.randint(0, x_rooms*y_rooms-1)
-            self.start = (rand_pos, rand_room)
+            self.start = self.get_random_start()
         else:
             self.start = start
-        self.target = target
         self.observation_space = spaces.Tuple((spaces.Discrete(cols),
                                                spaces.Discrete(rows),
                                                spaces.Discrete(x_rooms),
                                                spaces.Discrete(y_rooms)))
         self.action_space = spaces.Discrete(n_action)
         self.exits = exits
-        self.primitive_exits = set()  # exits should be discovered
 
         self.manager = manager
         if manager is not None:
@@ -56,7 +50,8 @@ class GridEnv(gym.Env):
 
     def step(self, action):
         assert self.agent_loc is not None, "agent loc is None!"
-        self._take_action(action)
+        if not self.target_reached():
+            self._take_action(action)
 
         if self.manager is not None:
             self.pos_queue.append(self.agent_loc)  # Add pos to gui pos queue
@@ -66,7 +61,6 @@ class GridEnv(gym.Env):
         if self.target_reached():
             reward = 0
             target_reached = True
-            self.reset()
         else:
             reward = -1
 

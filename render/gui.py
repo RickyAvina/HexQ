@@ -151,8 +151,12 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
                 container.render(pos)
         except:
             print("action queue: {}".format(action_queue))
+            pygame.quit()
         pygame.display.update()
     pygame.quit()
+
+def change_title(title):
+    pygame.display.set_caption(title)
 
 '''
 def set_exits(exits):
