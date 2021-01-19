@@ -36,10 +36,15 @@ class Square:
         self.label = pygame.font.SysFont("monospace", Consts.FONT_SIZE).render(str(self.num), 1, (255, 0, 0))
         self.x = x
         self.y = y
+        self.arrow = None
 
     def render(self):
         pygame.draw.rect(Container.WIN, self.color, (self.x+Consts.BORDER_SIZE, self.y+Consts.BORDER_SIZE, self.square_size, self.square_size))
         Container.WIN.blit(self.label, (self.x+Consts.BORDER_SIZE*2.5+(self.square_size-Consts.FONT_SIZE)//2, self.y+Consts.BORDER_SIZE+(self.square_size-Consts.FONT_SIZE)//2))
+        if self.arrow is not None:
+            print('here 3')
+            arrow_coords = get_arrow(self.arrow, self.x, self.y, self.square_size, self.square_size)
+            pygame.draw.polygon(Container.WIN, Consts.BLACK, arrow_coords)
 
 
 class Room:
@@ -126,6 +131,8 @@ class Container:
         self.agent.render(agent_loc)
 
 
+container = None
+
 def setup(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue):
     p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue))
     p1.start()
@@ -133,8 +140,8 @@ def setup(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
 def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue):
     global container
     WIN = pygame.display.set_mode((width, height))
-    pygame.display.set_caption('Room Env')
     pygame.init()
+    pygame.display.set_caption('Room Env')
     container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target, exits)
     run = True
     clock = pygame.time.Clock()
@@ -147,6 +154,7 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
                 break
         try:
             if len(action_queue) > 0:
+                #print("action queue: {}".format(len(action_queue)))
                 pos = action_queue.pop(0)
                 container.render(pos)
         except:
@@ -157,6 +165,51 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
 
 def change_title(title):
     pygame.display.set_caption(title)
+
+def render_q_values(q_values):
+    global container
+    '''
+    q values should be {Exit MDP:
+        {mdp: {a: q, a', q'}}}
+    '''
+    print("here 1")
+    if container is not None:
+        print("here 2")
+        for exit_mdp in q_values:
+            for mdp in q_values[exit_mdp]:
+                # find max Q
+                assert mdp.level == 0
+                max_action = max(q_values[exit_mdp][mdp], key=lambda k: q_values[exit_mdp][mdp].get(k))
+
+                # find tile associated with mdp
+                square = get_square(mdp.state_var)
+                square.arrow = max_action
+
+def get_arrow(arrow, x, y, w, h):
+    if arrow == 0:  # left
+        arrow_coords = [(0, h/2), (w/2, 0), (w/2, 3*h/8), (w, 3*h/8), (2, 5*h/8), (w/2, 5*h/8), (w/2, h)]
+    elif arrow == 1:  # up
+        arrow_coords = [(0, h/2), (w, h/2), (5*w/8, h/2), (5*w/8, h), (3*w/8, h), (3*w/8, h/2), (0, h/2)]
+    elif arrow == 2:  # right
+        arrow_coords = [(0, 3*h/8), (0, 5*h/8), (w/2, 0), (w/2, 3*h/8), (w, h/2), (w/2, h), (w/2, 5*h/8)]
+    elif arrow == 3:  # down
+        arrow_coords = [(0, h/2), (w/2, h), (w, h/2), (5*w/8, w/2), (5*w/8, 0), (3*w/8, 0), (3*w/8, w/2)]
+    else:
+        raise ValueError("arrow " + str(arrow) + " unrecognized")
+
+    arrow_coords = tuple([(coord[0]+x, coord[1]+y) for coord in arrow_coords])
+    return arrow_coords
+
+
+def get_square(coord):
+    global container
+    room_row = coord[0] // container.cols
+    room_col = coord[0] % container.cols
+    room = container.grid[room_row][room_col]
+    pos_row = coord[1] // container.cols
+    pos_col = coord[1] % container.cols
+    square = room.grid[pos_row][pos_col]
+    return square
 
 '''
 def set_exits(exits):

@@ -71,17 +71,15 @@ class HexQ(object):
         # level zero (primitive actions)
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
-        change_title("explore")
+        #change_title("explore")
 
         self.explore(level=0, exploration_steps=2000)
+        assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {}".format(77, len(self.mdps[0]))
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
-        for mdp in self.mdps[1]:
-            input("mdp: {} prim states: {}".format(mdp, mdp.primitive_states))
-
         ''' train sub_mdps '''
-        change_title("train sub_mdps") 
+        #change_title("train sub_mdps")
         self.train_sub_mdps(self.mdps[1])
 
         # level one (rooms)
