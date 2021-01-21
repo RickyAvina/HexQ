@@ -40,20 +40,16 @@ def qlearn(env, mdps,  mdp):
             sub_mdp = get_mdp(mdps, mdp.level-1, s)
             cum_reward = 0
 
-            try:
-                while sub_mdp != exit.mdp:
-                    a = get_action(sub_mdp, 0.2, mdp.policies[exit.mdp], False)  # right now hard coded probability, should decay
-                    s_p, r, d = exec_action(env, mdps, sub_mdp, s, a)
-                    cum_reward += r
-                    s = s_p
-                    next_sub_mdp = get_mdp(mdps, mdp.level-1, s)
-                    update_q_vals(mdp.policies[exit.mdp], sub_mdp, a, next_sub_mdp, r, d)
-                    sub_mdp = next_sub_mdp
+            while sub_mdp != exit.mdp:
+                a = get_action(sub_mdp, 0.2, mdp.policies[exit.mdp], False)  # right now hard coded probability, should decay
+                s_p, r, d = exec_action(env, mdps, sub_mdp, s, a)
+                cum_reward += r
+                s = s_p
+                next_sub_mdp = get_mdp(mdps, mdp.level-1, s)
+                update_q_vals(mdp.policies[exit.mdp], sub_mdp, a, next_sub_mdp, r, d)
+                sub_mdp = next_sub_mdp
 
-                render_q_values(mdp.policies, exit)
-                input("rendered.")
-            except Exception as e:
-                input("e: {} exit: {}".format(e, exit))
+        render_q_values(mdp.policies, exit)
             #input("q values: {}".format(mdp.policies[exit.mdp]))
 
 

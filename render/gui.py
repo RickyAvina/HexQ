@@ -43,7 +43,7 @@ class Square:
         pygame.draw.rect(Container.WIN, self.color, (self.x+Consts.BORDER_SIZE, self.y+Consts.BORDER_SIZE, self.square_size, self.square_size))
         Container.WIN.blit(self.label, (self.x+Consts.BORDER_SIZE*2.5+(self.square_size-Consts.FONT_SIZE)//2, self.y+Consts.BORDER_SIZE+(self.square_size-Consts.FONT_SIZE)//2))
         if self.arrow is not None:
-            print("num: {} arrow: {}".format(self.num, self.arrow))
+            #print("num: {} arrow: {}".format(self.num, self.arrow))
             arrow_coords = get_arrow(self.arrow, self.x, self.y, self.square_size, self.square_size)
             pygame.draw.polygon(Container.WIN, Consts.BLACK, arrow_coords)
 
@@ -102,7 +102,9 @@ class Container:
         Container.target = target
         Container.WIN = win
         Container.grid_dict = {}
-
+            
+        self.x_rooms = x_rooms
+        self.y_rooms = y_rooms
         self.rows = rows
         self.cols = cols
         self.grid = []
@@ -153,11 +155,6 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
             if event.type == pygame.QUIT:
                 run = False
                 break
-            if event.type == pygame.USEREVENT:
-                print("heee")
-                if event.type == 'update_qval':
-                    print("event received")
-                    add_arrows(container, event.data)
         try:
             if len(action_queue) > 0:
                 #print("action queue: {}".format(len(action_queue)))
@@ -176,14 +173,25 @@ def change_title(title):
 def render_q_values(q_values, exit):
     WIN = pygame.display.set_mode((800, 800))
     pygame.init()
-    pygame.display.set_caption(str(exit))
-    #exits = {(14, 0), (22, 0), (10, 1), (22, 1), (2, 2), (14, 2), (2, 3), (10, 3)}
-    print('mdp: ' + str(exit.mdp.state_var))
-    container = Container(WIN, 800, 800, 5, 5, 2, 2, (3,), exit.mdp.state_var)
-    add_arrows(container, q_values)
-    container.render((0, 0))
-    while True:
+    pygame.display.set_caption(str(exit.mdp))
+    container_q = Container(WIN, 800, 800, 5, 5, 2, 2, (3,), {exit.mdp.state_var})
+    try:
+        add_arrows(container_q, q_values)
+    except Exception as e:
+        input("[arrows] " + str(e))
+   
+    run = True
+    clock = pygame.time.Clock()
+
+    while run:
+        clock.tick(Consts.FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                break
+        container_q.render((0, 0))
         pygame.display.update()
+    pygame.quit()
 
 def add_arrows(container, q_values):
     '''
@@ -198,8 +206,10 @@ def add_arrows(container, q_values):
                 max_action = max(q_values[exit_mdp][mdp], key=lambda k: q_values[exit_mdp][mdp].get(k))
 
                 # find tile associated with mdp
-                print("mdp state_var: " + str(mdp.state_var))
-                square = get_square(container, mdp.state_var)
+                try:
+                    square = get_square(container, mdp.state_var)
+                except:
+                    raise ValueError("Couldn't find the square at " + str(mdp.state_var))
                 square.arrow = max_action
 
 def get_arrow(arrow, x, y, w, h):
@@ -219,8 +229,8 @@ def get_arrow(arrow, x, y, w, h):
 
 
 def get_square(container, coord):
-    room_row = coord[1] // container.cols
-    room_col = coord[1] % container.cols
+    room_row = coord[1] // container.x_rooms
+    room_col = coord[1] % container.y_rooms
     room = container.grid[room_row][room_col]
     pos_row = coord[0] // container.cols
     pos_col = coord[0] % container.cols
