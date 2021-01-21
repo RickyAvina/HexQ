@@ -33,6 +33,7 @@ class MDP(object):
         self.mer = set()  # mdps one level under
         self.primitive_states = set()
         self.actions = set()   # R => exits (for primitives, key=value)
+        self.exit_actions = {}
 
         self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
         # In future, could be a frozen dict {s: a: {s_p: count, s_p': count'}, a': {}}

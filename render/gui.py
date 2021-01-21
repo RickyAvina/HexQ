@@ -1,6 +1,7 @@
 import render.render_consts as Consts
 import multiprocessing
 import pygame
+import sys
 
 
 class Agent:
@@ -42,7 +43,7 @@ class Square:
         pygame.draw.rect(Container.WIN, self.color, (self.x+Consts.BORDER_SIZE, self.y+Consts.BORDER_SIZE, self.square_size, self.square_size))
         Container.WIN.blit(self.label, (self.x+Consts.BORDER_SIZE*2.5+(self.square_size-Consts.FONT_SIZE)//2, self.y+Consts.BORDER_SIZE+(self.square_size-Consts.FONT_SIZE)//2))
         if self.arrow is not None:
-            print('here 3')
+            print("num: {} arrow: {}".format(self.num, self.arrow))
             arrow_coords = get_arrow(self.arrow, self.x, self.y, self.square_size, self.square_size)
             pygame.draw.polygon(Container.WIN, Consts.BLACK, arrow_coords)
 
@@ -152,29 +153,44 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
             if event.type == pygame.QUIT:
                 run = False
                 break
+            if event.type == pygame.USEREVENT:
+                print("heee")
+                if event.type == 'update_qval':
+                    print("event received")
+                    add_arrows(container, event.data)
         try:
             if len(action_queue) > 0:
                 #print("action queue: {}".format(len(action_queue)))
                 pos = action_queue.pop(0)
                 container.render(pos)
         except:
-            print("action queue: {}".format(action_queue))
             pygame.quit()
+            sys.exit()
+
         pygame.display.update()
     pygame.quit()
 
 def change_title(title):
     pygame.display.set_caption(title)
 
-def render_q_values(q_values):
-    global container
+def render_q_values(q_values, exit):
+    WIN = pygame.display.set_mode((800, 800))
+    pygame.init()
+    pygame.display.set_caption(str(exit))
+    #exits = {(14, 0), (22, 0), (10, 1), (22, 1), (2, 2), (14, 2), (2, 3), (10, 3)}
+    print('mdp: ' + str(exit.mdp.state_var))
+    container = Container(WIN, 800, 800, 5, 5, 2, 2, (3,), exit.mdp.state_var)
+    add_arrows(container, q_values)
+    container.render((0, 0))
+    while True:
+        pygame.display.update()
+
+def add_arrows(container, q_values):
     '''
     q values should be {Exit MDP:
         {mdp: {a: q, a', q'}}}
     '''
-    print("here 1")
     if container is not None:
-        print("here 2")
         for exit_mdp in q_values:
             for mdp in q_values[exit_mdp]:
                 # find max Q
@@ -182,16 +198,17 @@ def render_q_values(q_values):
                 max_action = max(q_values[exit_mdp][mdp], key=lambda k: q_values[exit_mdp][mdp].get(k))
 
                 # find tile associated with mdp
-                square = get_square(mdp.state_var)
+                print("mdp state_var: " + str(mdp.state_var))
+                square = get_square(container, mdp.state_var)
                 square.arrow = max_action
 
 def get_arrow(arrow, x, y, w, h):
     if arrow == 0:  # left
-        arrow_coords = [(0, h/2), (w/2, 0), (w/2, 3*h/8), (w, 3*h/8), (2, 5*h/8), (w/2, 5*h/8), (w/2, h)]
+        arrow_coords = [(0, h/2), (w/2, 0), (w/2, 3*h/8), (w, 3*h/8), (w, 5*h/8), (w/2, 5*h/8), (w/2, h)]
     elif arrow == 1:  # up
-        arrow_coords = [(0, h/2), (w, h/2), (5*w/8, h/2), (5*w/8, h), (3*w/8, h), (3*w/8, h/2), (0, h/2)]
+        arrow_coords = [(0, h/2), (w/2, 0), (w, h/2), (5*w/8, h/2), (5*w/8, h), (3*w/8, h), (3*w/8, h/2)]
     elif arrow == 2:  # right
-        arrow_coords = [(0, 3*h/8), (0, 5*h/8), (w/2, 0), (w/2, 3*h/8), (w, h/2), (w/2, h), (w/2, 5*h/8)]
+        arrow_coords = [(0, 5*h/8), (w/2, 5*h/8), (w/2, 0), (w, h/2), (w/2, h), (w/2, 3*h/8), (0, 3*h/8)]
     elif arrow == 3:  # down
         arrow_coords = [(0, h/2), (w/2, h), (w, h/2), (5*w/8, w/2), (5*w/8, 0), (3*w/8, 0), (3*w/8, w/2)]
     else:
@@ -201,13 +218,12 @@ def get_arrow(arrow, x, y, w, h):
     return arrow_coords
 
 
-def get_square(coord):
-    global container
-    room_row = coord[0] // container.cols
-    room_col = coord[0] % container.cols
+def get_square(container, coord):
+    room_row = coord[1] // container.cols
+    room_col = coord[1] % container.cols
     room = container.grid[room_row][room_col]
-    pos_row = coord[1] // container.cols
-    pos_col = coord[1] % container.cols
+    pos_row = coord[0] // container.cols
+    pos_col = coord[0] % container.cols
     square = room.grid[pos_row][pos_col]
     return square
 

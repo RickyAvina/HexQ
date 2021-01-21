@@ -18,5 +18,4 @@ python3.6 main.py \
 --prefix "" \
 --state_dim 2 \
 --target 3 \
---render \
 --mode "train"

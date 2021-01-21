@@ -75,6 +75,7 @@ class HexQ(object):
 
         self.explore(level=0, exploration_steps=2000)
         assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {}".format(77, len(self.mdps[0]))
+        
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
@@ -116,6 +117,11 @@ class HexQ(object):
             mdp = MDP(level=level, state_var=state_var)
             mdp.mer = mer
             mdp.exits = exits
+            for exit in exits:
+                for sub_mdp in mer:
+                    if sub_mdp == exit.mdp:
+                        sub_mdp.actions.remove(exit.action)
+
             mdp.actions = exits
             for _mdp in mer:
                 mdp.primitive_states.update(_mdp.primitive_states)

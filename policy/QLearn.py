@@ -40,32 +40,51 @@ def qlearn(env, mdps,  mdp):
             sub_mdp = get_mdp(mdps, mdp.level-1, s)
             cum_reward = 0
 
-            while sub_mdp != exit.mdp:
-                a = get_action(sub_mdp, 0.2, mdp.policies[exit.mdp])  # right now hard coded probability, should decay
-                s_p, r, d = exec_action(env, mdps, sub_mdp, s, a)
-                assert not d, "should never really be done..."
-                cum_reward += r
-                s = s_p
-                next_sub_mdp = get_mdp(mdps, mdp.level-1, s)
-                update_q_vals(mdp.policies[exit.mdp], sub_mdp, a, next_sub_mdp, r, d)
-                sub_mdp = next_sub_mdp
+            try:
+                while sub_mdp != exit.mdp:
+                    a = get_action(sub_mdp, 0.2, mdp.policies[exit.mdp], False)  # right now hard coded probability, should decay
+                    s_p, r, d = exec_action(env, mdps, sub_mdp, s, a)
+                    cum_reward += r
+                    s = s_p
+                    next_sub_mdp = get_mdp(mdps, mdp.level-1, s)
+                    update_q_vals(mdp.policies[exit.mdp], sub_mdp, a, next_sub_mdp, r, d)
+                    sub_mdp = next_sub_mdp
 
-            render_q_values(mdp.policies)
-            input("cumm reward: {}".format(cum_reward))
+                render_q_values(mdp.policies, exit)
+                input("rendered.")
+            except Exception as e:
+                input("e: {} exit: {}".format(e, exit))
             #input("q values: {}".format(mdp.policies[exit.mdp]))
 
+
 def max_q(exit_qvals, mdp):
-    assert mdp in exit_qvals, "{} not in qvals[exit]!".format(mdp)
+    if mdp not in exit_qvals:
+        raise ValueError("{} not in qvals[exit]!".format(mdp))
     return max(exit_qvals[mdp], key=lambda k: exit_qvals[mdp].get(k))
 
+def get_non_exit_action(mdp, a):
+    for exit in mdp.exits:
+        if exit.mdp == mdp and a == exit.action:
+            return get_non_exit_action(mdp, random.choice(tuple(mdp.actions)))
 
-def get_action(mdp, p, exit_qvals):
+def get_action(mdp, p, exit_qvals, exit_actions_allowed=True):
     if random.random() > p:
-        return random.choice(tuple(mdp.actions))
+        a = random.choice(tuple(mdp.actions))
+        return a
     else:
         # return choice with highest q val
-        return max_q(exit_qvals, mdp)
+        try:
+            action = max_q(exit_qvals, mdp)
+            return action
+        except Exception as e:
+            raise Exception("[get_action] " + str(e))
 
 def update_q_vals(exit_qvals, sub_mdp, a, next_sub_mdp, r, d):
-    max_future_q = max_q(exit_qvals, next_sub_mdp)
-    exit_qvals[sub_mdp][a] = (1-beta)*exit_qvals[sub_mdp][a] + (1-d)*beta*(r + gamma*max_future_q)
+    try:
+        if not d:
+            max_future_q = max_q(exit_qvals, next_sub_mdp)
+            exit_qvals[sub_mdp][a] = (1-beta)*exit_qvals[sub_mdp][a] + beta*(r + gamma*max_future_q)
+        else:
+            exit_qvals[sub_mdp][a] = (1-beta)*exit_qvals[sub_mdp][a]
+    except Exception as e:
+        raise Exception("[update_q_vals] " + str(e))
