@@ -170,6 +170,7 @@ def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_que
 def change_title(title):
     pygame.display.set_caption(title)
 
+
 def render_q_values(q_values, exit):
     WIN = pygame.display.set_mode((800, 800))
     pygame.init()
@@ -179,7 +180,7 @@ def render_q_values(q_values, exit):
         add_arrows(container_q, q_values)
     except Exception as e:
         input("[arrows] " + str(e))
-   
+
     run = True
     clock = pygame.time.Clock()
 
@@ -215,10 +216,10 @@ def add_arrows(container, q_values):
 def get_arrow(arrow, x, y, w, h):
     if arrow == 0:  # left
         arrow_coords = [(0, h/2), (w/2, 0), (w/2, 3*h/8), (w, 3*h/8), (w, 5*h/8), (w/2, 5*h/8), (w/2, h)]
-    elif arrow == 1:  # up
-        arrow_coords = [(0, h/2), (w/2, 0), (w, h/2), (5*w/8, h/2), (5*w/8, h), (3*w/8, h), (3*w/8, h/2)]
-    elif arrow == 2:  # right
+    elif arrow == 1:  # right
         arrow_coords = [(0, 5*h/8), (w/2, 5*h/8), (w/2, 0), (w, h/2), (w/2, h), (w/2, 3*h/8), (0, 3*h/8)]
+    elif arrow == 2:  # up
+        arrow_coords = [(0, h/2), (w/2, 0), (w, h/2), (5*w/8, h/2), (5*w/8, h), (3*w/8, h), (3*w/8, h/2)]
     elif arrow == 3:  # down
         arrow_coords = [(0, h/2), (w/2, h), (w, h/2), (5*w/8, w/2), (5*w/8, 0), (3*w/8, 0), (3*w/8, w/2)]
     else:

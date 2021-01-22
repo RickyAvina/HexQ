@@ -75,7 +75,7 @@ class HexQ(object):
 
         self.explore(level=0, exploration_steps=2000)
         assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {}".format(77, len(self.mdps[0]))
-        
+
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
