@@ -6,6 +6,7 @@ from gym_env import make_env
 from hexq.hexQ import HexQ
 from misc.utils import set_log
 from tensorboardX import SummaryWriter
+from render.gui import GUI
 
 
 # Should move this to a Constants file:
@@ -33,22 +34,23 @@ def main(args):
     args.target = tuple(args.target)
     args.exits = exits
 
+    gui = None
     if args.render:
         multiprocessing.set_start_method("spawn")
-        with Manager() as manager:
-            train(args, manager)
-    else:
-        train(args, None)
-
+        manager = multiprocessing.Manager()
+        queue = manager.Queue()
+        gui = GUI(args.gui_width, args.gui_height, args.rows, args.cols, args.x_rooms,
+                  args.y_rooms, args.target, args.exits, queue)
+    train(args, gui)
 
 # TODO Please move train function into a new file (e.g., trainer.py)
-def train(args, manager):
+def train(args, gui):
     # Make environment
-    env = make_env(args, manager)
+    env = make_env(args, gui)
 
     # Initialize HexQ algorithm
     hq = HexQ(env=env, state_dim=args.state_dim, start=args.start, target=args.target)
-    hq.alg()
+    #hq.alg()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HeXQ")
@@ -69,6 +71,18 @@ if __name__ == "__main__":
 
     parser.add_argument('--state_dim', default=2, type=int,
         help="Number of dimensions in the environment")
+    parser.add_argument('--rows', default=5, type=int,
+        help="Number of rows in every room")
+    parser.add_argument('--cols', default=5, type=int,
+        help="Number of cols in every room")
+    parser.add_argument('--x_rooms', default=2, type=int,
+        help="Number of rooms in every row of a floor")
+    parser.add_argument('--y_rooms', default=2, type=int,
+        help="Number of rooms in every col of a floor")
+    parser.add_argument('--gui_width', default=800, type=int,
+        help="Width of GUI in pixels")
+    parser.add_argument('--gui_height', default=600, type=int,
+        help="Height of GUI in pixels")
     parser.add_argument('--start', nargs='*', type=int,
         help="Starting location")
     parser.add_argument('--target', nargs='*', type=int,
@@ -76,16 +90,6 @@ if __name__ == "__main__":
               and 1 variable to specify a whole room")
     parser.add_argument('--render', action='store_true',
         help="If True, render GUI")
-
-    # TODO For binary variable, please consider the following argparse example:
-    # parser.add_argument(
-    #     "--use-lstm", action="store_true",
-    #     help="If True, include LSTM in network architecture")
-    # In the _train.sh, if you specify --use-lstm argument, then
-    # the variable is set to True
-    parser.add_argument(
-        "--mode", default="train", type=str,
-        help="Choose between training and testing")
     parser.add_argument(
         "--test_model", default="", type=str,
         help="Specify model to test")

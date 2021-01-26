@@ -1,13 +1,13 @@
 import gym
 import numpy as np
 from gym import spaces
-import render.gui as gui
+#import render.gui as gui
 import random
 from misc.utils import random_exclude
 
 
 class GridEnv(gym.Env):
-    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, state_dim, target, exits, start=None, manager=None):
+    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, state_dim, target, exits, start=None, gui=None):
         '''
         target loc: tuple representing target. (1,2,3) would mean Floor 3, Room 2, pos 1
                     (2, 3) would mean room 2, floor 3
@@ -32,13 +32,16 @@ class GridEnv(gym.Env):
                                                spaces.Discrete(y_rooms)))
         self.action_space = spaces.Discrete(n_action)
         self.exits = exits
+        self.gui = gui
 
+        '''
         self.manager = manager
         if manager is not None:
             self.pos_queue = manager.list()
             gui.setup(width=600, height=600, rows=rows, cols=cols,
                       x_rooms=x_rooms, y_rooms=y_rooms, target=target,
                       exits=self.exits, action_queue=self.pos_queue)
+        '''
 
     def target_reached(self):
         if len(self.target) == 1:
@@ -52,9 +55,6 @@ class GridEnv(gym.Env):
         assert self.agent_loc is not None, "agent loc is None!"
         if not self.target_reached():
             self._take_action(action)
-
-        if self.manager is not None:
-            self.pos_queue.append(self.agent_loc)  # Add pos to gui pos queue
 
         next_observation = self.agent_loc
         target_reached = False

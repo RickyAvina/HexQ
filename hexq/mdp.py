@@ -22,9 +22,6 @@ class MDP(object):
     states are a set
     actions are a tuple
     '''
-    # states are shared across all MDPs
-    states = set()
-    env = None
 
     def __init__(self, level, state_var):
         self.state_var = state_var

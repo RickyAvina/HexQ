@@ -60,6 +60,7 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p):
     if s != s_p:
         adj_mdp = get_mdp(mdps, mdp.level, s_p)
         mdp.adj.add(adj_mdp)
+        adj_mdp.adj.add(mdp)
 
     # fill in MDPs transition count
     if (s, a) not in mdp.trans_count:
@@ -71,11 +72,9 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p):
 
     # fill in exit/entries if primitive
     if mdp.level == 0:
-        if s[mdp.level:] != s_p[mdp.level:]:
+        if s != s_p:
             exit = Exit(mdp, a, adj_mdp)
-            if exit not in mdp.exits:
-                mdp.exits.add(exit)
-
+            mdp.exits.add(exit)
 
 def aggregate_mdp_properties(mdps):
     for mdp in mdps:

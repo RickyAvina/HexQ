@@ -17,5 +17,10 @@ print_header "Training network"
 python3.6 main.py \
 --prefix "" \
 --state_dim 2 \
+--rows 5 \
+--cols 5 \
+--x_rooms 2 \
+--y_rooms 2 \
 --target 3 \
---mode "train"
+--gui_width 800 \
+--gui_height 800 \

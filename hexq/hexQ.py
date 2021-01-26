@@ -3,20 +3,20 @@ import policy.QLearn
 import numpy as np
 from hexq.mdp import MDP, Exit
 from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties
-from render.gui import change_title
 
 
 class HexQ(object):
     def __init__(self, env, state_dim, start, target):
         self.env = env
         self.start = start
-        self.target = target  # TODO This varaible seems to be not used
+        self.target = target 
         self.exploration_steps = 10000  # TODO In the algorithm argparaser!
                                         # TODO In HexQ page 81, they used 2000
         self.mdps = {}  # level => [MDP,.. ]
         self.state_dim = state_dim
 
         self._init_mdps()
+        self.alg()
 
     def _init_mdps(self):
         MDP.env = self.env
@@ -108,10 +108,14 @@ class HexQ(object):
     def create_sub_mdps(self, level):
         mdps_copy = set(self.mdps[level-1].copy())
         mdps = []
+        assert len(mdps_copy) == 77
 
         while len(mdps_copy) > 0:
             curr_mdp = random.choice(tuple(mdps_copy))
-            mer, exits = self.bfs(mdps_copy, curr_mdp, level)
+            mer, exits = set(), set()
+            self.bfs(mdps_copy, curr_mdp, level, mer, exits)
+
+            assert len(mer) == 1 or len(mer) == 25, "{} mdps: {}\n{}".format(len(mer), sorted(list(mer)), sorted(self.mdps[level-1]))
 
             state_var = next(iter(mer)).state_var[1:]
             mdp = MDP(level=level, state_var=state_var)
@@ -129,12 +133,7 @@ class HexQ(object):
 
         self.mdps[level] = mdps
 
-    def bfs(self, mdp_list, mdp, level, mer=None, exits=None):
-        if mer is None:
-            mer = set()
-        if exits is None:
-            exits = set()
-
+    def bfs(self, mdp_list, mdp, level, mer, exits):
         if mdp in mdp_list:
             mdp_list.remove(mdp)
         mer.add(mdp)
@@ -142,11 +141,13 @@ class HexQ(object):
         for neighbor in mdp.adj:
             if neighbor.state_var[level:] == mdp.state_var[level:]:
                 if neighbor in mdp_list:
-                    self.bfs(mdp_list=mdp_list, mdp=neighbor, level=level, mer=mer, exits=exits)
+                    self.bfs(mdp_list, neighbor, level, mer, exits)
             else:
+                # find exit action
+                exit_action = None
                 for exit in mdp.exits:
-                    if neighbor == exit.next_mdp:  # found exit
-                        new_exit = Exit(mdp, exit.action, neighbor)
+                    if neighbor == exit.next_mdp:
+                        exit_action = exit.action
+                        new_exit = Exit(mdp, exit_action, neighbor)
                         exits.add(new_exit)
-                        break
-        return mer, exits
+
