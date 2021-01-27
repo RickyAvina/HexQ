@@ -7,6 +7,7 @@ from hexq.hexQ import HexQ
 from misc.utils import set_log
 from tensorboardX import SummaryWriter
 from render.gui import GUI
+import sys
 
 
 # Should move this to a Constants file:
@@ -42,6 +43,10 @@ def main(args):
         gui = GUI(args.gui_width, args.gui_height, args.rows, args.cols, args.x_rooms,
                   args.y_rooms, args.target, args.exits, queue)
     train(args, gui)
+
+    if gui:
+        gui.process.join()
+        sys.exit()
 
 # TODO Please move train function into a new file (e.g., trainer.py)
 def train(args, gui):

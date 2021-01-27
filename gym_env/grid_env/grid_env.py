@@ -34,15 +34,6 @@ class GridEnv(gym.Env):
         self.exits = exits
         self.gui = gui
 
-        '''
-        self.manager = manager
-        if manager is not None:
-            self.pos_queue = manager.list()
-            gui.setup(width=600, height=600, rows=rows, cols=cols,
-                      x_rooms=x_rooms, y_rooms=y_rooms, target=target,
-                      exits=self.exits, action_queue=self.pos_queue)
-        '''
-
     def target_reached(self):
         if len(self.target) == 1:
             return self.agent_loc[1:] == self.target

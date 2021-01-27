@@ -3,7 +3,6 @@ import multiprocessing
 import pygame
 import sys
 import enum
-import threading
 
 
 class Agent:
@@ -45,7 +44,6 @@ class Square:
         pygame.draw.rect(Container.WIN, self.color, (self.x+Consts.BORDER_SIZE, self.y+Consts.BORDER_SIZE, self.square_size, self.square_size))
         Container.WIN.blit(self.label, (self.x+Consts.BORDER_SIZE*2.5+(self.square_size-Consts.FONT_SIZE)//2, self.y+Consts.BORDER_SIZE+(self.square_size-Consts.FONT_SIZE)//2))
         if self.arrow is not None:
-            #print("num: {} arrow: {}".format(self.num, self.arrow))
             arrow_coords = get_arrow(self.arrow, self.x, self.y, self.square_size, self.square_size)
             pygame.draw.polygon(Container.WIN, Consts.BLACK, arrow_coords)
 
@@ -131,83 +129,6 @@ class Container:
                 self.grid[row][col].render()
 
 
-'''
-def setup(width, height, rows, cols, x_rooms, y_rooms, target, exits):
-    queue = multiprocessing.Queue()
-    
-    p1 = multiprocessing.Process(target=start, args=(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue))
-    p1.start()
-
-def start(width, height, rows, cols, x_rooms, y_rooms, target, exits, action_queue):
-    global container
-    WIN = pygame.display.set_mode((width, height))
-    pygame.init()
-    pygame.display.set_caption('Room Env')
-    container = Container(WIN, width, height, rows, cols, x_rooms, y_rooms, target, exits)
-    run = True
-    clock = pygame.time.Clock()
-
-    while run:
-        clock.tick(Consts.FPS)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                break
-        try:
-            if len(action_queue) > 0:
-                #print("action queue: {}".format(len(action_queue)))
-                pos = action_queue.pop(0)
-                container.render(pos)
-        except:
-            pygame.quit()
-            sys.exit()
-
-        pygame.display.update()
-    pygame.quit()
-
-def change_title(title):
-    pygame.display.set_caption(title)
-
-
-def render_q_values(q_values, exit):
-    WIN = pygame.display.set_mode((800, 800))
-    pygame.init()
-    pygame.display.set_caption(str(exit.mdp))
-    container_q = Container(WIN, 800, 800, 5, 5, 2, 2, (3,), {exit.mdp.state_var})
-    try:
-        add_arrows(container_q, q_values)
-    except Exception as e:
-        input("[arrows] " + str(e))
-
-    run = True
-    clock = pygame.time.Clock()
-
-    while run:
-        clock.tick(Consts.FPS)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                break
-        container_q.render((0, 0))
-        pygame.display.update()
-    pygame.quit()
-
-def add_arrows(container, q_values):
-    if container is not None:
-        for exit_mdp in q_values:
-            for mdp in q_values[exit_mdp]:
-                # find max Q
-                assert mdp.level == 0
-                max_action = max(q_values[exit_mdp][mdp], key=lambda k: q_values[exit_mdp][mdp].get(k))
-
-                # find tile associated with mdp
-                try:
-                    square = get_square(container, mdp.state_var)
-                except:
-                    raise ValueError("Couldn't find the square at " + str(mdp.state_var))
-                square.arrow = max_action
-'''
-
 def get_arrow(arrow, x, y, w, h):
     if arrow == 0:  # left
         arrow_coords = [(0, h/2), (w/2, 0), (w/2, 3*h/8), (w, 3*h/8), (w, 5*h/8), (w/2, 5*h/8), (w/2, h)]
@@ -257,6 +178,7 @@ class GUI():
         self.target = target
         self.exits = exits
         self.queue = queue
+        self.done = False
         self.process = multiprocessing.Process(target=self.start, args=(queue,))
         self.process.start()
 
@@ -283,7 +205,7 @@ class GUI():
                 if event.kind == EventType.QVAL:
                     exit_square = self.get_square(event.data['exit'])
                     exit_square.color = Consts.RED
-                    arrow_squares = self.add_arrows(event.data['mdps']) 
+                    arrow_squares = self.add_arrows(event.data['mdps'])
                     self.container.render()
                     pygame.display.update()
 
@@ -302,16 +224,8 @@ class GUI():
                     exit_square.color = Consts.GREEN
                     for square in arrow_squares:
                         square.arrow = None
-                    
-                    #self.container.render()
-                    #pygame.display.update()
 
-            self.container.render()
-            pygame.display.update()
-
-        #queue.close()
         pygame.quit()
-        sys.exit()
 
     def get_square(self, coord):
         room_row = coord[1] // self.container.x_rooms
@@ -322,16 +236,10 @@ class GUI():
         square = room.grid[pos_row][pos_col]
         return square
 
-    def render_q_values(self, arrows):
-        print("putting in {} arrows".format(len(arrows)))
-        for exit in arrows:
-            self.queue.put(Event(EventType.QVAL, {'exit': exit, 'mdps': arrows[exit]}))
-
-        #print(q_values)
-        #self.queue.put(q_values)
-        #self.queue.put(Event(EventType.QVAL, 4))
-        
-        #self.queue.put(Event(EventType.QVAL, q_values))
+    def render_q_values(self, arrow_list):
+        for arrows in arrow_list:
+            for exit in arrows:
+                self.queue.put(Event(EventType.QVAL, {'exit': exit, 'mdps': arrows[exit]}))
 
     def add_arrows(self, q_values):
         '''

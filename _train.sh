@@ -24,3 +24,4 @@ python3.6 main.py \
 --target 3 \
 --gui_width 800 \
 --gui_height 800 \
+--render

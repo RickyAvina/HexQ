@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 
 lr = 0.05
-exploration_steps = 500
+exploration_steps = 2000
 gamma = 0.9
 init_val = 0
 
@@ -42,8 +42,12 @@ def qlearn(env, mdps,  mdp):
             cum_reward = 0
             decay_count += 1
             history = []
+            steps_taken = 0
 
             while sub_mdp != exit.mdp:
+                if steps_taken > 200:
+                    break
+
                 a = get_action(sub_mdp, decay_count/exploration_steps, mdp.policies[exit.mdp], False)
 
                 s_p, r, d = exec_action(env, mdps, sub_mdp, s, a)
@@ -54,12 +58,14 @@ def qlearn(env, mdps,  mdp):
                 history.append((sub_mdp, a, next_sub_mdp, r, d))
                 sub_mdp = next_sub_mdp
                 s = s_p
+                steps_taken += 1
+
             update_q_vals(mdp.policies[exit.mdp], history)
 
-        if env.gui:
-            # convert to ({state var: arrow}
-            env.gui.render_q_values(get_arrows(mdp.policies))
-            print("hereee")
+    return get_arrows(mdp.policies)
+    #if env.gui:
+        # convert to ({state var: arrow}
+        #env.gui.render_q_values(get_arrows(mdp.policies))
 
 def get_arrows(qvals):
     res = {}

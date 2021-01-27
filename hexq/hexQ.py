@@ -9,7 +9,7 @@ class HexQ(object):
     def __init__(self, env, state_dim, start, target):
         self.env = env
         self.start = start
-        self.target = target 
+        self.target = target
         self.exploration_steps = 10000  # TODO In the algorithm argparaser!
                                         # TODO In HexQ page 81, they used 2000
         self.mdps = {}  # level => [MDP,.. ]
@@ -73,7 +73,7 @@ class HexQ(object):
         # level 1 instead of level 0
         #change_title("explore")
 
-        self.explore(level=0, exploration_steps=2000)
+        self.explore(level=0, exploration_steps=20000)
         assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {}".format(77, len(self.mdps[0]))
 
         # find Markov Equivalent Reigons
@@ -87,8 +87,14 @@ class HexQ(object):
         #self.explore(level=1)
 
     def train_sub_mdps(self, mdps):
+        arrow_list = []
+
         for mdp in mdps:
-            policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp)
+            arrows = policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp)
+            arrow_list.append(arrows)
+
+        if self.env.gui:
+            self.env.gui.render_q_values(arrow_list)
 
     def explore(self, level, exploration_steps=None):
         s = self.env.reset()
@@ -113,8 +119,7 @@ class HexQ(object):
         while len(mdps_copy) > 0:
             curr_mdp = random.choice(tuple(mdps_copy))
             mer, exits = set(), set()
-            self.bfs(mdps_copy, curr_mdp, level, mer, exits)
-
+            self.dfs(mdps_copy, curr_mdp, level, mer, exits)
             assert len(mer) == 1 or len(mer) == 25, "{} mdps: {}\n{}".format(len(mer), sorted(list(mer)), sorted(self.mdps[level-1]))
 
             state_var = next(iter(mer)).state_var[1:]
@@ -133,7 +138,7 @@ class HexQ(object):
 
         self.mdps[level] = mdps
 
-    def bfs(self, mdp_list, mdp, level, mer, exits):
+    def dfs(self, mdp_list, mdp, level, mer, exits):
         if mdp in mdp_list:
             mdp_list.remove(mdp)
         mer.add(mdp)
@@ -141,7 +146,7 @@ class HexQ(object):
         for neighbor in mdp.adj:
             if neighbor.state_var[level:] == mdp.state_var[level:]:
                 if neighbor in mdp_list:
-                    self.bfs(mdp_list, neighbor, level, mer, exits)
+                    self.dfs(mdp_list, neighbor, level, mer, exits)
             else:
                 # find exit action
                 exit_action = None
