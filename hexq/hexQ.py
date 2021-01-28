@@ -1,8 +1,7 @@
 import random
 import policy.QLearn
 import numpy as np
-from hexq.mdp import MDP, Exit
-from misc.utils import exec_action, get_mdp, fill_mdp_properties, aggregate_mdp_properties
+from hexq.mdp import MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
 
 
 class HexQ(object):
@@ -155,4 +154,3 @@ class HexQ(object):
                         exit_action = exit.action
                         new_exit = Exit(mdp, exit_action, neighbor)
                         exits.add(new_exit)
-

@@ -85,7 +85,7 @@ class MDP(object):
                 self.exits.add((s, a))
                 self.entries.add(s_p)
 
-    def _count_to_probs(self):
+    def count_to_probs(self):
         trans_probs = {}
 
         for s_a in self.trans_count:
@@ -118,3 +118,63 @@ class MDP(object):
             for neighbor in self.adj[s]:
                 if neighbor in states and (s, neighbor) not in self.exit_pairs:
                     self.bfs(states=states, s=neighbor, mer=mer)
+
+
+""" MDP Utility Methods """
+def fill_mdp_properties(mdps, mdp, s, a, s_p):
+    # fill in MDPs adjacency set
+
+    if s != s_p:
+        adj_mdp = get_mdp(mdps, mdp.level, s_p)
+        mdp.adj.add(adj_mdp)
+        adj_mdp.adj.add(mdp)
+
+    # fill in MDPs transition count
+    if (s, a) not in mdp.trans_count:
+        mdp.trans_count[(s, a)] = {s_p: 1}
+    elif s_p not in mdp.trans_count[(s, a)]:
+        mdp.trans_count[(s, a)][s_p] = 1
+    else:
+        mdp.trans_count[(s, a)][s_p] += 1
+
+    # fill in exit/entries if primitive
+    if mdp.level == 0:
+        if s != s_p:
+            exit = Exit(mdp, a, adj_mdp)
+            mdp.exits.add(exit)
+
+def aggregate_mdp_properties(mdps):
+    for mdp in mdps:
+        mdp.trans_probs = mdp.count_to_probs()
+
+def get_mdp(mdps, level, s):
+    sub_mdp = None
+
+    for _sub_mdp in mdps[level]:
+        if s in _sub_mdp.primitive_states:
+            sub_mdp = _sub_mdp
+            break
+
+    assert sub_mdp is not None, "state {} does not belong to any sub MDP at level {}".format(s, level)
+    return sub_mdp
+
+def exec_action(env, mdps, mdp, state, action, rs=None):
+    '''
+    action is {0, 1, 2, 3} if primitive and (state, action) if not
+    '''
+    if rs is None:
+        rs = 0
+
+    if mdp.level == 0:
+        s_p, r, d, info  = env.step(action)
+        return s_p, r, d, info
+
+    sub_mdp = get_mdp(mdps, mdp.level-1, state)
+    exit_mdp = action.mdp  # mdp(l0) -> action -> next_mdp(l0)
+
+    while sub_mdp != exit_mdp:
+        s_p, r, d, info = exec_action(action, mdps, sub_mdp, state, action, rs)
+        rs += r
+        sub_mdp = get_mdp(mdps, sub_mdp.level, s_p)
+
+    return s_p, rs, d, info

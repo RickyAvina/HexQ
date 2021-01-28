@@ -1,5 +1,5 @@
 import random
-from misc.utils import get_mdp, exec_action
+from hexq.mdp import get_mdp, exec_action
 import numpy as np
 from tqdm import tqdm
 
@@ -114,4 +114,3 @@ def update_q_vals(exit_qvals, history):
             best_action = max_q(exit_qvals, sp_mdp)
             max_future_q = exit_qvals[sp_mdp][best_action]
         exit_qvals[s_mdp][a] = (1-lr)*exit_qvals[s_mdp][a] + lr*(r+gamma*max_future_q)
-
