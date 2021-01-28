@@ -60,7 +60,6 @@ class HexQ(object):
 
     def alg(self):
         # Find freq ordering of vars and initialize lowest level mdps
-        # TODO Variable seq is not used
         # TODO that maybe sorting order needs to be opposite such that
         # most frequent variable is in the first order
         freq = self.find_freq()
@@ -70,20 +69,25 @@ class HexQ(object):
         # level zero (primitive actions)
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
-        #change_title("explore")
 
         self.explore(level=0, exploration_steps=20000)
-        assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {}".format(77, len(self.mdps[0]))
+        assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {} mdps".format(77, len(self.mdps[0]))
 
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
         ''' train sub_mdps '''
-        #change_title("train sub_mdps")
         self.train_sub_mdps(self.mdps[1])
 
         # level one (rooms)
-        #self.explore(level=1)
+        self.explore(level=1)
+
+        # find Markov Equivelant Regions (which should be one)
+        #self.create_sub_mdps(2)
+
+        #input(self.mdps[2])
+        #for mdp in self.mdps[2]:
+        #    input("MER: {}\nactions: {}\nexits: {}".format(mdp.mer, mdp.actions, mdp.exits))
 
     def train_sub_mdps(self, mdps):
         arrow_list = []
@@ -102,6 +106,12 @@ class HexQ(object):
             mdp = get_mdp(self.mdps, level, s)
             a = mdp.select_random_action()
             s_p, r, d, info = exec_action(self.env, self.mdps, mdp, s, a)
+            # take exit action
+            if level > 0:
+                sub_mdp = get_mdp(self.mdps, level-1, s_p)
+                s_p, exit_r, d, info = exec_action(self.env, self.mdps, sub_mdp, s_p, a.action)
+                r += exit_r
+
             fill_mdp_properties(self.mdps, mdp, s, a, s_p)
             if d:
                 s = self.env.reset()
@@ -113,13 +123,11 @@ class HexQ(object):
     def create_sub_mdps(self, level):
         mdps_copy = set(self.mdps[level-1].copy())
         mdps = []
-        assert len(mdps_copy) == 77
 
         while len(mdps_copy) > 0:
             curr_mdp = random.choice(tuple(mdps_copy))
             mer, exits = set(), set()
             self.dfs(mdps_copy, curr_mdp, level, mer, exits)
-            assert len(mer) == 1 or len(mer) == 25, "{} mdps: {}\n{}".format(len(mer), sorted(list(mer)), sorted(self.mdps[level-1]))
 
             state_var = next(iter(mer)).state_var[1:]
             mdp = MDP(level=level, state_var=state_var)
@@ -147,6 +155,8 @@ class HexQ(object):
                 if neighbor in mdp_list:
                     self.dfs(mdp_list, neighbor, level, mer, exits)
             else:
+                #if level > 0:
+                #    input("mdp: {}\nmdp exits: {}\nneighbor: {}".format(mdp, mdp.exits, neighbor))
                 # find exit action
                 exit_action = None
                 for exit in mdp.exits:

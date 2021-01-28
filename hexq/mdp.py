@@ -1,4 +1,6 @@
 import random
+import sys
+sys.path.append('.')
 
 
 class Exit(object):
@@ -158,7 +160,7 @@ def get_mdp(mdps, level, s):
     assert sub_mdp is not None, "state {} does not belong to any sub MDP at level {}".format(s, level)
     return sub_mdp
 
-def exec_action(env, mdps, mdp, state, action, rs=None):
+def exec_action(env, mdps, mdp, state, exit, qvals=None, rs=None):
     '''
     action is {0, 1, 2, 3} if primitive and (state, action) if not
     '''
@@ -166,15 +168,23 @@ def exec_action(env, mdps, mdp, state, action, rs=None):
         rs = 0
 
     if mdp.level == 0:
-        s_p, r, d, info  = env.step(action)
+        s_p, r, d, info = env.step(exit)  # at primitive level, exit is action
         return s_p, r, d, info
 
     sub_mdp = get_mdp(mdps, mdp.level-1, state)
-    exit_mdp = action.mdp  # mdp(l0) -> action -> next_mdp(l0)
+    exit_mdp = exit.mdp  # mdp(l0) -> action -> next_mdp(l0)
+
+    s_p, d, info = state, False, dict()
 
     while sub_mdp != exit_mdp:
-        s_p, r, d, info = exec_action(action, mdps, sub_mdp, state, action, rs)
+        # get best action according to q-values
+        best_action = max_q(mdp.policies[exit.mdp], sub_mdp)
+        s_p, r, d, info = exec_action(env, mdps, sub_mdp, state, best_action, rs)
         rs += r
         sub_mdp = get_mdp(mdps, sub_mdp.level, s_p)
 
     return s_p, rs, d, info
+
+
+def max_q(exit_qvals, mdp):
+    return max(exit_qvals[mdp], key=lambda k: exit_qvals[mdp].get(k))
