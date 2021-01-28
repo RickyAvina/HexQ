@@ -37,7 +37,7 @@ class HexQ(object):
 
         for _ in range(self.exploration_steps):
             action = np.random.randint(4)  # TODO Use env.action_space instead of hard-coding
-            next_state, reward, done, _ = self.env.step(action)
+            next_state, reward, done, info = self.env.step(action)
             seq.append(next_state)
             if done:
                 state = self.env.reset()
@@ -102,7 +102,7 @@ class HexQ(object):
         for _ in range(self.exploration_steps if exploration_steps is None else exploration_steps):
             mdp = get_mdp(self.mdps, level, s)
             a = mdp.select_random_action()
-            s_p, r, d = exec_action(self.env, self.mdps, mdp, s, a)
+            s_p, r, d, info = exec_action(self.env, self.mdps, mdp, s, a)
             fill_mdp_properties(self.mdps, mdp, s, a, s_p)
             if d:
                 s = self.env.reset()

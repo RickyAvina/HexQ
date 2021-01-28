@@ -188,6 +188,8 @@ class GUI():
         pygame.display.set_caption('Room Env')
         self.container = Container(self.WIN, self.width, self.height, self.rows, self.cols, self.x_rooms, self.y_rooms, self.target, self.exits)
         self.agent = Agent(self.rows, self.cols)
+        self.container.render()
+        pygame.display.update()
 
         self.run = True
         clock = pygame.time.Clock()

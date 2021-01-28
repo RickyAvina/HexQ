@@ -1,7 +1,6 @@
 import os
 import argparse
 import multiprocessing
-from multiprocessing import Manager
 from gym_env import make_env
 from hexq.hexQ import HexQ
 from misc.utils import set_log

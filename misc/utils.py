@@ -149,7 +149,7 @@ def get_sub_action(mdps, mdp, s, a, p):
         action = eps_greedy_action(s, qvals, sub_mdp, p)
         return action, sub_mdp
 
-def exec_action(env, mdps, mdp, state, action, s_ps=None, rs=None, ds=None):
+def exec_action(env, mdps, mdp, state, action, rs=None):
     '''
     action is {0, 1, 2, 3} if primitive and (state, action) if not
     '''
@@ -157,16 +157,15 @@ def exec_action(env, mdps, mdp, state, action, s_ps=None, rs=None, ds=None):
         rs = 0
 
     if mdp.level == 0:
-        s_p, r, d, _ = env.step(action)
-        return s_p, r, d
+        s_p, r, d, info  = env.step(action)
+        return s_p, r, d, info
 
     sub_mdp = get_mdp(mdps, mdp.level-1, state)
     exit_mdp = action.mdp  # mdp(l0) -> action -> next_mdp(l0)
 
     while sub_mdp != exit_mdp:
-        s_p, r, d, _ = exec_action(action, mdps, sub_mdp, state, action, s_ps, rs, ds)
+        s_p, r, d, info = exec_action(action, mdps, sub_mdp, state, action, rs)
         rs += r
-        s = s_p
-        sub_mdp = get_mdp(mdps, sub_mdp.level, s)
-
-    return s_ps, rs, ds
+        sub_mdp = get_mdp(mdps, sub_mdp.level, s_p)
+    
+    return s_p, rs, d, info
