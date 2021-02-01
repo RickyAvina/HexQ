@@ -9,6 +9,11 @@ function print_header(){
 virtualenv venv -p python3
 source venv/bin/activate
 
+# OS specific
+case "$OSTYPE" in
+    darwin*) defaults write org.python.python ApplePersistenceIgnoreState NO ;;
+esac
+
 # Install dependencies
 python3 -m pip install -r requirements.txt
 
@@ -24,4 +29,9 @@ python3.6 main.py \
 --target 3 \
 --gui_width 800 \
 --gui_height 800 \
---render
+--exploration_steps 2000 \
+--init_q -10.0 \
+--lr 0.8 \
+--gamma 0.9 \
+--verbose \
+--render 

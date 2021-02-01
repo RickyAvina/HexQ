@@ -1,41 +1,44 @@
 import random
 from hexq.mdp import get_mdp, exec_action
-import numpy as np
 from tqdm import tqdm
 
 
-lr = 0.8
-exploration_steps = 2000
-gamma = 0.9
-init_val = -10
-
-
-def qlearn(env, mdps,  mdp):
+def qlearn(env, mdps,  mdp, args):
     '''
-    env: env
-    mdps: all mdps in hierarcy
-    mdp: sub-mdp to train
-    '''
+    Implements Q-Learning to help agents find a policy to reach all
+    of the exits in an mdp. Fills in an mdp's policy attribute which has the form:
+        {exit_mdp:
+            {mdp:
+                {a: q, a': q'}
+            mdp':
+                {a: q, a': q'}},
+        exit_mdp': {...}}
 
-    '''
-    mdp.policies: {exit_mdp: {mdp:
-                                {a: q, a': q'}
-                              mdp':
-                                {a: q, a': q'}},
-                    exit_mdp': {...}}
+    Arguments:
+        env: Gym env
+        mdps: All MDPs in the hierarchy
+        mdp: particular sub-mdp to train
+        args: command-line args
+
+    Returns:
+        A dictionary mapping states to arrows for rendering of the form:
+            {state: [0-4], ...}
+            Where 0 = left, 1 = right, 2 = up, 3 = right
     '''
 
     for exit in mdp.exits:
-        print("finding policy for exit: {}".format(exit))
+        if args.verbose:
+            print("finding policy for exit: {}".format(exit))
+
         mdp.policies[exit.mdp] = dict()
 
         for sub_mdp in mdp.mer:
             mdp.policies[exit.mdp][sub_mdp] = dict()
             for action in sub_mdp.actions:
-                mdp.policies[exit.mdp][sub_mdp][action] = init_val  # Initialize Q-Vals
+                mdp.policies[exit.mdp][sub_mdp][action] = args.init_q  # Initialize Q-Vals
 
         decay_count = 0
-        for step in tqdm(range(exploration_steps)):
+        for step in tqdm(range(args.exploration_steps), disable=(not args.verbose)):
 
             # initialize pos in MER
             s = env.reset_in(mdp.primitive_states)
@@ -45,17 +48,22 @@ def qlearn(env, mdps,  mdp):
             history = []
             steps_taken = 0
 
-            while sub_mdp != exit.mdp:
+            while sub_mdp != exit.next_mdp:
                 if steps_taken > 500:
                     break
 
-                a = get_action(sub_mdp, 0.5+decay_count/(2*exploration_steps), mdp.policies[exit.mdp], False)
+                a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_steps), mdp.policies[exit.mdp])
 
                 s_p, r, d, info = exec_action(env, mdps, sub_mdp, s, a)
                 next_sub_mdp = get_mdp(mdps, mdp.level-1, s_p)
-                if next_sub_mdp == exit.mdp:
-                    r = 0
-                    d = True
+                if next_sub_mdp not in mdp.mer:
+                    if next_sub_mdp == exit.next_mdp:
+                        r = 0
+                        d = True
+                    else:
+                        r = -100
+                        s_p = s
+                        next_sub_mdp = sub_mdp
 
                 cum_reward += r
                 history.append((sub_mdp, a, next_sub_mdp, r, d))
@@ -64,11 +72,22 @@ def qlearn(env, mdps,  mdp):
                 steps_taken += 1
 
             if len(history) > 0:
-                update_q_vals(mdp.policies[exit.mdp], history)
+                update_q_vals(args, mdp.policies[exit.mdp], history)
 
     return get_arrows(mdp.policies)
 
 def get_arrows(qvals):
+    '''
+    Get arrows asosciated with Q-Values
+
+    Arguments:
+        qvals: {exit_mdp: {mdp: {action: q, ...}}}
+
+    Returns:
+        {state: [0-4], ...}
+        Where 0 = left, 1 = right, 2 = up, 3 = right
+    '''
+
     res = {}
     for exit_mdp in qvals:
         res[exit_mdp.state_var] = {}
@@ -85,7 +104,7 @@ def get_non_exit_action(mdp, a):
         if exit.mdp == mdp and a == exit.action:
             return get_non_exit_action(mdp, random.choice(tuple(mdp.actions)))
 
-def get_action(mdp, p, exit_qvals, exit_actions_allowed=True):
+def get_action(mdp, p, exit_qvals):
     if random.random() > p:
         a = random.choice(tuple(mdp.actions))
         return a
@@ -94,15 +113,7 @@ def get_action(mdp, p, exit_qvals, exit_actions_allowed=True):
         action = max_q(exit_qvals, mdp)
         return action
 
-def add_qval(exit_qvals, mdp, a=None):
-    if mdp not in exit_qvals:
-        exit_qvals[mdp] = dict()
-        for action in mdp.actions:
-            exit_qvals[mdp][action] = init_val
-    if a:
-        exit_qvals[mdp][a] = init_val
-
-def update_q_vals(exit_qvals, history):
+def update_q_vals(args, exit_qvals, history):
     local_history = history.copy()
     local_history.reverse()
 
@@ -113,4 +124,4 @@ def update_q_vals(exit_qvals, history):
         if not d:
             best_action = max_q(exit_qvals, sp_mdp)
             max_future_q = exit_qvals[sp_mdp][best_action]
-        exit_qvals[s_mdp][a] = (1-lr)*exit_qvals[s_mdp][a] + lr*(r+gamma*max_future_q)
+        exit_qvals[s_mdp][a] = (1-args.lr)*exit_qvals[s_mdp][a] + args.lr*(r+args.gamma*max_future_q)

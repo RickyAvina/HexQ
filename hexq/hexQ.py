@@ -5,14 +5,14 @@ from hexq.mdp import MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_prop
 
 
 class HexQ(object):
-    def __init__(self, env, state_dim, start, target):
+    def __init__(self, env, args):
         self.env = env
-        self.start = start
-        self.target = target
-        self.exploration_steps = 10000  # TODO In the algorithm argparaser!
-                                        # TODO In HexQ page 81, they used 2000
+        self.start = args.start
+        self.target = args.target
+        self.args = args
+        self.exploration_steps = args.exploration_steps
         self.mdps = {}  # level => [MDP,.. ]
-        self.state_dim = state_dim
+        self.state_dim = args.state_dim
 
         self._init_mdps()
         self.alg()
@@ -34,7 +34,7 @@ class HexQ(object):
         state = self.env.reset()
         seq = [state]
 
-        for _ in range(self.exploration_steps):
+        for _ in range(self.exploration_steps*10):
             action = np.random.randint(4)  # TODO Use env.action_space instead of hard-coding
             next_state, reward, done, info = self.env.step(action)
             seq.append(next_state)
@@ -93,7 +93,7 @@ class HexQ(object):
         arrow_list = []
 
         for mdp in mdps:
-            arrows = policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp)
+            arrows = policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp, args=self.args)
             arrow_list.append(arrows)
 
         if self.env.gui:
@@ -133,10 +133,12 @@ class HexQ(object):
             mdp = MDP(level=level, state_var=state_var)
             mdp.mer = mer
             mdp.exits = exits
-            for exit in exits:
-                for sub_mdp in mer:
-                    if sub_mdp == exit.mdp:
-                        sub_mdp.actions.remove(exit.action)
+
+            # remove exits from actions
+            #for exit in exits:
+            #    for sub_mdp in mer:
+            #        if sub_mdp == exit.mdp:
+            #            sub_mdp.actions.remove(exit.action)
 
             mdp.actions = exits
             for _mdp in mer:

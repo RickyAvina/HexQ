@@ -1,7 +1,6 @@
 import git
 import logging
 import random
-from hexq.mdp import Exit
 import argparse
 
 
@@ -11,6 +10,17 @@ def random_exclude(exclude, low, high):
         return random_exclude(exclude, low, high)
     else:
         return randInt
+
+def restricted_float(x):
+    try:
+        x = float(x)
+    except ValueError:
+        raise argparse.ArgumentError("%r is not a floating-point literal" % (x,))
+
+    if x < 0.0 or x > 1.0:
+        raise argparse.ArgumentError("%r is not in the range [0.0, 1.0]" % (x,))
+
+    return x
 
 def set_logger(logger_name, log_file, level=logging.INFO):
     log = logging.getLogger(logger_name)
