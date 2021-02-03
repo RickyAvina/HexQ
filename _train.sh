@@ -29,9 +29,13 @@ python3.6 main.py \
 --target 3 \
 --gui_width 800 \
 --gui_height 800 \
---exploration_steps 2000 \
+--exploration_iterations 1000 \
 --init_q -10.0 \
 --lr 0.8 \
 --gamma 0.9 \
+--epsilon 0.9 \
+--epsilon_decay 0.999 \
+--min_epsilon 0.1 \
+--max_steps 500 \
 --verbose \
---render 
+--render

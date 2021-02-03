@@ -10,7 +10,6 @@ class HexQ(object):
         self.start = args.start
         self.target = args.target
         self.args = args
-        self.exploration_steps = args.exploration_steps
         self.mdps = {}  # level => [MDP,.. ]
         self.state_dim = args.state_dim
 
@@ -34,7 +33,7 @@ class HexQ(object):
         state = self.env.reset()
         seq = [state]
 
-        for _ in range(self.exploration_steps*10):
+        for _ in range(self.args.exploration_iterations*10):
             action = np.random.randint(4)  # TODO Use env.action_space instead of hard-coding
             next_state, reward, done, info = self.env.step(action)
             seq.append(next_state)
@@ -70,7 +69,7 @@ class HexQ(object):
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
 
-        self.explore(level=0, exploration_steps=20000)
+        self.explore(level=0, exploration_iterations=self.args.exploration_iterations)
         assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {} mdps".format(77, len(self.mdps[0]))
 
         # find Markov Equivalent Reigons
@@ -99,10 +98,10 @@ class HexQ(object):
         if self.env.gui:
             self.env.gui.render_q_values(arrow_list)
 
-    def explore(self, level, exploration_steps=None):
+    def explore(self, level, exploration_iterations=None):
         s = self.env.reset()
 
-        for _ in range(self.exploration_steps if exploration_steps is None else exploration_steps):
+        for _ in range(self.args.exploration_iterations if exploration_iterations is None else exploration_iterations):
             mdp = get_mdp(self.mdps, level, s)
             a = mdp.select_random_action()
             s_p, r, d, info = exec_action(self.env, self.mdps, mdp, s, a)

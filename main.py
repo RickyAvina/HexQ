@@ -6,14 +6,15 @@ from hexq.hexQ import HexQ
 from misc.utils import set_log, restricted_float
 from tensorboardX import SummaryWriter
 from render.gui import GUI
+import render.render_consts as Consts
 import sys
 
 
 # Should move this to a Constants file:
-exits = {(14, 0), (22, 0),
-         (10, 1), (22, 1),
-         (2, 2), (14, 2), (2, 3),
-         (10, 3)}
+#exits = {(14, 0), (22, 0),
+#         (10, 1), (22, 1),
+#         (2, 2), (14, 2), (2, 3),
+#         (10, 3)}
 
 def main(args):
     # Create directories
@@ -32,7 +33,7 @@ def main(args):
         args.start = tuple(args.start)
 
     args.target = tuple(args.target)
-    args.exits = exits
+    args.exits = Consts.EXITS
 
     gui = None
     if args.render:
@@ -98,8 +99,11 @@ if __name__ == "__main__":
 
     # Algorithm Args
     parser.add_argument(
-        '--exploration_steps', default=2000, type=int,
-        help="Amount of iteratiors to explore")
+        '--exploration_iterations', default=2000, type=int,
+        help="Amount of iterations to explore")
+    parser.add_argument(
+        '--max_steps', default=500, type=int,
+        help="Maximum amount of steps per iteration")
     parser.add_argument(
         '--lr', default=0.8, type=restricted_float,
         help="Learning rate of Q-Learn alg")
@@ -109,6 +113,15 @@ if __name__ == "__main__":
     parser.add_argument(
         '--init_q', default=0.0, type=float,
         help="Q-Value initialization value")
+    parser.add_argument(
+        '--epsilon', default=0.9, type=restricted_float,
+        help="Initial eps value for eps-greedy actions")
+    parser.add_argument(
+        '--min_epsilon', default=0.1, type=restricted_float,
+        help="Min value epsilon can reach")
+    parser.add_argument(
+        '--epsilon_decay', default=0.999, type=restricted_float,
+        help="Amount epsilon decays every iteration")
 
     # Meta Arguments
     parser.add_argument(

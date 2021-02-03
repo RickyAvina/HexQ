@@ -38,7 +38,7 @@ def qlearn(env, mdps,  mdp, args):
                 mdp.policies[exit.mdp][sub_mdp][action] = args.init_q  # Initialize Q-Vals
 
         decay_count = 0
-        for step in tqdm(range(args.exploration_steps), disable=(not args.verbose)):
+        for step in tqdm(range(args.exploration_iterations), disable=(not args.verbose)):
 
             # initialize pos in MER
             s = env.reset_in(mdp.primitive_states)
@@ -49,10 +49,10 @@ def qlearn(env, mdps,  mdp, args):
             steps_taken = 0
 
             while sub_mdp != exit.next_mdp:
-                if steps_taken > 500:
+                if steps_taken > args.max_steps:
                     break
 
-                a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_steps), mdp.policies[exit.mdp])
+                a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_iterations), mdp.policies[exit.mdp])
 
                 s_p, r, d, info = exec_action(env, mdps, sub_mdp, s, a)
                 next_sub_mdp = get_mdp(mdps, mdp.level-1, s_p)
