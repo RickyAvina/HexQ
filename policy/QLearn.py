@@ -30,12 +30,12 @@ def qlearn(env, mdps,  mdp, args):
         if args.verbose:
             print("finding policy for exit: {}".format(exit))
 
-        mdp.policies[exit.mdp] = dict()
+        mdp.policies[exit] = dict()
 
         for sub_mdp in mdp.mer:
-            mdp.policies[exit.mdp][sub_mdp] = dict()
+            mdp.policies[exit][sub_mdp] = dict()
             for action in sub_mdp.actions:
-                mdp.policies[exit.mdp][sub_mdp][action] = args.init_q  # Initialize Q-Vals
+                mdp.policies[exit][sub_mdp][action] = args.init_q  # Initialize Q-Vals
 
         decay_count = 0
         for step in tqdm(range(args.exploration_iterations), disable=(not args.verbose)):
@@ -48,22 +48,23 @@ def qlearn(env, mdps,  mdp, args):
             history = []
             steps_taken = 0
 
-            while sub_mdp != exit.next_mdp:
+            # exit is {l1 mdp: action: {l0 mdp -> prim action -> l0 mdp}: l1 mdp}
+            while sub_mdp != exit.action.next_mdp:
                 if steps_taken > args.max_steps:
                     break
 
-                a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_iterations), mdp.policies[exit.mdp])
-
+                a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_iterations), mdp.policies[exit])
                 s_p, r, d, info = exec_action(env, mdps, sub_mdp, s, a)
                 next_sub_mdp = get_mdp(mdps, mdp.level-1, s_p)
+
                 if next_sub_mdp not in mdp.mer:
-                    if next_sub_mdp == exit.next_mdp:
+                    if next_sub_mdp == exit.action.next_mdp:
                         r = 0
                         d = True
                     else:
                         r = -100
-                        s_p = s
                         next_sub_mdp = sub_mdp
+                        break
 
                 cum_reward += r
                 history.append((sub_mdp, a, next_sub_mdp, r, d))
@@ -72,7 +73,7 @@ def qlearn(env, mdps,  mdp, args):
                 steps_taken += 1
 
             if len(history) > 0:
-                update_q_vals(args, mdp.policies[exit.mdp], history)
+                update_q_vals(args, mdp.policies[exit], history)
 
     return get_arrows(mdp.policies)
 
@@ -81,7 +82,7 @@ def get_arrows(qvals):
     Get arrows asosciated with Q-Values
 
     Arguments:
-        qvals: {exit_mdp: {mdp: {action: q, ...}}}
+        qvals: {exit: {mdp: {action: q, ...}}}
 
     Returns:
         {state: [0-4], ...}
@@ -89,11 +90,12 @@ def get_arrows(qvals):
     '''
 
     res = {}
-    for exit_mdp in qvals:
-        res[exit_mdp.state_var] = {}
-        for mdp in qvals[exit_mdp]:
-            max_action = max(qvals[exit_mdp][mdp], key=lambda k: qvals[exit_mdp][mdp].get(k))
-            res[exit_mdp.state_var][mdp.state_var] = max_action
+    for exit in qvals:
+        res[exit.action.mdp.state_var] = {}
+        for mdp in qvals[exit]:
+            max_action = max(qvals[exit][mdp], key=lambda k: qvals[exit][mdp].get(k))
+            res[exit.action.mdp.state_var][mdp.state_var] = max_action
+
     return res
 
 def max_q(exit_qvals, mdp):

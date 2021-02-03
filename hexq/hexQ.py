@@ -75,11 +75,12 @@ class HexQ(object):
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
+
         ''' train sub_mdps '''
         self.train_sub_mdps(self.mdps[1])
 
         # level one (rooms)
-        self.explore(level=1)
+        #self.explore(level=1)
 
         # find Markov Equivelant Regions (which should be one)
         #self.create_sub_mdps(2)
@@ -122,6 +123,7 @@ class HexQ(object):
     def create_sub_mdps(self, level):
         mdps_copy = set(self.mdps[level-1].copy())
         mdps = []
+        upper_level_exits = {}
 
         while len(mdps_copy) > 0:
             curr_mdp = random.choice(tuple(mdps_copy))
@@ -131,20 +133,21 @@ class HexQ(object):
             state_var = next(iter(mer)).state_var[1:]
             mdp = MDP(level=level, state_var=state_var)
             mdp.mer = mer
-            mdp.exits = exits
-
-            # remove exits from actions
-            #for exit in exits:
-            #    for sub_mdp in mer:
-            #        if sub_mdp == exit.mdp:
-            #            sub_mdp.actions.remove(exit.action)
-
-            mdp.actions = exits
+            upper_level_exits[mdp] = exits
             for _mdp in mer:
                 mdp.primitive_states.update(_mdp.primitive_states)
             mdps.append(mdp)
 
         self.mdps[level] = mdps
+
+        # Add MDP Exits/Actions
+        for mdp in self.mdps[level]:
+            mdp.exits = set()
+            for s_mdp, exit, n_mdp in upper_level_exits[mdp]:
+                neighbor_mdp = get_mdp(self.mdps, level, n_mdp.state_var)
+                mdp.exits.add(Exit(mdp, exit, neighbor_mdp))
+
+        mdp.actions = mdp.exits  # redundant, remove in future
 
     def dfs(self, mdp_list, mdp, level, mer, exits):
         if mdp in mdp_list:
@@ -156,12 +159,8 @@ class HexQ(object):
                 if neighbor in mdp_list:
                     self.dfs(mdp_list, neighbor, level, mer, exits)
             else:
-                #if level > 0:
-                #    input("mdp: {}\nmdp exits: {}\nneighbor: {}".format(mdp, mdp.exits, neighbor))
                 # find exit action
-                exit_action = None
                 for exit in mdp.exits:
                     if neighbor == exit.next_mdp:
-                        exit_action = exit.action
-                        new_exit = Exit(mdp, exit_action, neighbor)
+                        new_exit = (mdp, exit, neighbor)
                         exits.add(new_exit)

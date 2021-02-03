@@ -178,7 +178,7 @@ def exec_action(env, mdps, mdp, state, exit, qvals=None, rs=None):
 
     while sub_mdp != exit_mdp:
         # get best action according to q-values
-        best_action = max_q(mdp.policies[exit.mdp], sub_mdp)
+        best_action = max_q(mdp.policies[exit], sub_mdp)
         s_p, r, d, info = exec_action(env, mdps, sub_mdp, state, best_action, rs)
         rs += r
         sub_mdp = get_mdp(mdps, sub_mdp.level, s_p)
