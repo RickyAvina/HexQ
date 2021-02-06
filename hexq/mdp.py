@@ -10,7 +10,7 @@ class Exit(object):
         self.next_mdp = next_mdp
 
     def __repr__(self):
-        return "mdp: {} -> (action: {}) -> next_mdp: {}".format(self.mdp, self.action, self.next_mdp)
+        return "mdp: {} -> (action: {}) -> next_mdp: {}".format(self.mdp.simple_rep(), self.action, self.next_mdp.simple_rep())
 
     def __eq__(self, other):
         return self.mdp == other.mdp and self.next_mdp == other.next_mdp
@@ -31,10 +31,12 @@ class MDP(object):
 
         self.mer = set()  # mdps one level under
         self.primitive_states = set()
-        self.actions = set()   # R => exits (for primitives, key=value)
-        self.exit_actions = {}
+        #self.actions = set()   # R => exits (for primitives, key=value)
 
-        self.trans_count = {}  # (s, a) -> {s_p: count, s_p': count'}
+        self.trans_history = {}  # (s, a) -> {'states':  {s_p: count, s_p': count'}}
+        #                                     'rewards': {r, r', ...}
+        #                                     'dones':   {d, d', ...}
+
         # In future, could be a frozen dict {s: a: {s_p: count, s_p': count'}, a': {}}
         self.adj = set()
         self.trans_probs = None
@@ -46,21 +48,66 @@ class MDP(object):
         self.policies = dict()  # {exit: Q-val dict}
 
     def __repr__(self):
+        return "level {} var {} mer: {}".format(self.level, self.state_var, self.mer)
+
+    def simple_rep(self):
         return "level {} var {}".format(self.level, self.state_var)
 
     def __eq__(self, other):
-        return self.level == other.level and self.state_var == other.state_var
+        if isinstance(other, MDP):
+            return (self.level == other.level and self.state_var == other.state_var and self.mer==other.mer)
+        else:
+            return False
 
     def __hash__(self):
-        return hash((self.level,) + self.state_var)
+        return hash(self.__repr__())
 
     def __lt__(self, other):
-        return self.state_var < other.state_var
+        if self.level < other.level:
+            return True
+        elif self.level > other.level:
+            return False
+        else:
+            return self.state_var < other.state_var
 
     def select_random_action(self):
-        assert len(self.actions) > 0, "actions are empty"
-        return random.choice(tuple(self.actions))
+        #if self.level == 0:
+        #    return random.choice(tuple(self.actions))
+        assert len(self.exits) > 0, "actions are empty, mdp: {}".format(self)
+        return random.choice(tuple(self.exits))
 
+    def fill_properties(self, a, next_mdp, r, d):
+        # fill adjacency set
+        if self != next_mdp:
+            self.adj.add(next_mdp)
+            #next_mdp.adj.add(self)
+
+        # fill in trans history
+        if a not in self.trans_history:
+            self.trans_history[a] = {'states': {next_mdp: 1}}
+        elif next_mdp not in self.trans_history[a]['states']:
+            self.trans_history[a]['states'][next_mdp] = 1
+        else:
+            self.trans_history[a]['states'][next_mdp] += 1
+
+        if 'rewards' not in self.trans_history[a]:
+            self.trans_history[a]['rewards'] = []
+        self.trans_history[a]['rewards'].append(r)
+
+        if 'dones' not in self.trans_history[a]:
+            self.trans_history[a]['dones'] = []
+        self.trans_history[a]['dones'].append(d)
+
+    def get_upper_mdp(self, mdps):
+        # get mdp at level l+1
+        for _mdp in mdps[self.level+1]:
+            if self in _mdp.mer:
+                return _mdp
+
+        raise ValueError("MDP {} is not a sub mdp of an mdp at level {}".format(self, self.level+1))
+        return None
+
+    '''
     def add_trans(self, s, a, s_p):
         # transitions are deterministic after primitive level
         # states are also known, however, it is kept for convenience
@@ -75,12 +122,12 @@ class MDP(object):
 
         # fill in transition probabilities and entries/exits
         if s != self.target:
-            if (s, a) not in self.trans_count:
-                self.trans_count[(s, a)] = {s_p: 1}
-            elif s_p not in self.trans_count[(s, a)]:
-                self.trans_count[(s, a)][s_p] = 1
+            if (s, a) not in self.trans_history:
+                self.trans_history[(s, a)] = {s_p: 1}
+            elif s_p not in self.trans_history[(s, a)]:
+                self.trans_history[(s, a)][s_p] = 1
             else:
-                self.trans_count[(s, a)][s_p] += 1
+                self.trans_history[(s, a)][s_p] += 1
 
             if s[1] != s_p[1]:  # exit/entry
                 self.exit_pairs.add((s, s_p))
@@ -89,17 +136,15 @@ class MDP(object):
 
     def count_to_probs(self):
         trans_probs = {}
-
-        for s_a in self.trans_count:
+        for s_a in self.trans_history:
             if s_a not in trans_probs:
                 trans_probs[s_a] = {}
-
-            total_count = sum(self.trans_count[s_a].values())
-            for s_p in self.trans_count[s_a]:
-                trans_probs[s_a][s_p] = self.trans_count[s_a][s_p] / total_count
+            total_count = sum(self.trans_history[s_a]['states'].values())
+            for s_p in self.trans_history[s_a]['states']:
+                trans_probs[s_a][s_p] = self.trans_history[s_a]['states'][s_p] / total_count
 
         return trans_probs
-
+    '''
     def find_MERs(self):
         ''' MERs are just states with deterministic intra-region transitions '''
         states = self.states.copy()
@@ -123,21 +168,30 @@ class MDP(object):
 
 
 """ MDP Utility Methods """
-def fill_mdp_properties(mdps, mdp, s, a, s_p):
+def fill_mdp_properties(mdps, mdp, s, a, s_p, r, d):
     # fill in MDPs adjacency set
-
     if s != s_p:
         adj_mdp = get_mdp(mdps, mdp.level, s_p)
         mdp.adj.add(adj_mdp)
         adj_mdp.adj.add(mdp)
 
+    # USE MDP INSTEAD OF S
+
     # fill in MDPs transition count
-    if (s, a) not in mdp.trans_count:
-        mdp.trans_count[(s, a)] = {s_p: 1}
-    elif s_p not in mdp.trans_count[(s, a)]:
-        mdp.trans_count[(s, a)][s_p] = 1
+    if (s, a) not in mdp.trans_history:
+        mdp.trans_history[(s, a)] = {'states': {s_p: 1}}
+    elif s_p not in mdp.trans_history[(s, a)]['states']:
+        mdp.trans_history[(s, a)]['states'][s_p] = 1
     else:
-        mdp.trans_count[(s, a)][s_p] += 1
+        mdp.trans_history[(s, a)]['states'][s_p] += 1
+
+    if 'rewards' not in mdp.trans_history[(s, a)]:
+        mdp.trans_history[(s, a)]['rewards'] = []
+    mdp.trans_history[(s, a)]['rewards'].append(r)
+
+    if 'dones' not in mdp.trans_history[(s, a)]:
+        mdp.trans_history[(s, a)]['dones'] = []
+    mdp.trans_history[(s, a)]['dones'].append(d)
 
     # fill in exit/entries if primitive
     if mdp.level == 0:
@@ -148,6 +202,17 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p):
 def aggregate_mdp_properties(mdps):
     for mdp in mdps:
         mdp.trans_probs = mdp.count_to_probs()
+
+'''
+def get_upper_mdp(self, mdps):
+    # get mdp at level l+1
+    for _mdp in self.mdps[self.level+1]:
+        if self in _mdp.mer:
+            return _mdp
+
+    raise ValueError("MDP {} is not a sub mdp of an mdp at level {}".format(mdp, mdp.level+1))
+    return None
+'''
 
 def get_mdp(mdps, level, s):
     sub_mdp = None
@@ -160,30 +225,28 @@ def get_mdp(mdps, level, s):
     assert sub_mdp is not None, "state {} does not belong to any sub MDP at level {}".format(s, level)
     return sub_mdp
 
-def exec_action(env, mdps, mdp, state, exit, qvals=None, rs=None):
+def exec_action(env, mdps, mdp, state, exit):
     '''
     action is {0, 1, 2, 3} if primitive and (state, action) if not
     '''
-    if rs is None:
-        rs = 0
 
     if mdp.level == 0:
         s_p, r, d, info = env.step(exit)  # at primitive level, exit is action
         return s_p, r, d, info
 
-    sub_mdp = get_mdp(mdps, mdp.level-1, state)
-    exit_mdp = exit.mdp  # mdp(l0) -> action -> next_mdp(l0)
-
     s_p, d, info = state, False, dict()
+    cumm_reward = 0
 
-    while sub_mdp != exit_mdp:
+    while mdp != exit.next_mdp:
+        sub_mdp = get_mdp(mdps, mdp.level-1, state)
         # get best action according to q-values
         best_action = max_q(mdp.policies[exit], sub_mdp)
-        s_p, r, d, info = exec_action(env, mdps, sub_mdp, state, best_action, rs)
-        rs += r
-        sub_mdp = get_mdp(mdps, sub_mdp.level, s_p)
+        s_p, r, d, info = exec_action(env, mdps, sub_mdp, state, best_action)
+        cumm_reward += r
+        state = s_p
+        mdp = get_mdp(mdps, mdp.level, state)
 
-    return s_p, rs, d, info
+    return s_p, cumm_reward, d, info
 
 
 def max_q(exit_qvals, mdp):

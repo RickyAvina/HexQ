@@ -34,11 +34,18 @@ def qlearn(env, mdps,  mdp, args):
 
         for sub_mdp in mdp.mer:
             mdp.policies[exit][sub_mdp] = dict()
-            for action in sub_mdp.actions:
+            for action in sub_mdp.exits:
                 mdp.policies[exit][sub_mdp][action] = args.init_q  # Initialize Q-Vals
+#        if mdp.level > 1:
+#            for key in mdp.policies:
+#                input("exit: {}".format(key))
+#                for sub_mdp in mdp.policies[key]:
+#                    input("sub_mdp: {}".format(sub_mdp.simple_rep()))
+#                    for action in mdp.policies[key][sub_mdp]:
+#                        input("action: {}".format(action))
 
         decay_count = 0
-        for step in tqdm(range(args.exploration_iterations), disable=(not args.verbose)):
+        for step in tqdm(range(args.exploration_iterations//mdp.level), disable=(not args.verbose)):
 
             # initialize pos in MER
             s = env.reset_in(mdp.primitive_states)
@@ -52,7 +59,8 @@ def qlearn(env, mdps,  mdp, args):
             while sub_mdp != exit.action.next_mdp:
                 if steps_taken > args.max_steps:
                     break
-
+                #if mdp.level > 1:
+                #    input("exit: {}\nsub_mdp: {}\nsub_mdp actions: {}\nsub_mdps exits: {}".format(exit, sub_mdp.simple_rep(), sub_mdp.actions, sub_mdp.exits))
                 a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_iterations), mdp.policies[exit])
                 s_p, r, d, info = exec_action(env, mdps, sub_mdp, s, a)
                 next_sub_mdp = get_mdp(mdps, mdp.level-1, s_p)
@@ -75,7 +83,10 @@ def qlearn(env, mdps,  mdp, args):
             if len(history) > 0:
                 update_q_vals(args, mdp.policies[exit], history)
 
-    return get_arrows(mdp.policies)
+    if mdp.level == 1:
+        return get_arrows(mdp.policies)
+    else:
+        return []
 
 def get_arrows(qvals):
     '''
@@ -101,15 +112,16 @@ def get_arrows(qvals):
 def max_q(exit_qvals, mdp):
     return max(exit_qvals[mdp], key=lambda k: exit_qvals[mdp].get(k))
 
+'''
 def get_non_exit_action(mdp, a):
     for exit in mdp.exits:
         if exit.mdp == mdp and a == exit.action:
             return get_non_exit_action(mdp, random.choice(tuple(mdp.actions)))
+'''
 
 def get_action(mdp, p, exit_qvals):
     if random.random() > p:
-        a = random.choice(tuple(mdp.actions))
-        return a
+        return mdp.select_random_action()
     else:
         # return choice with highest q val
         action = max_q(exit_qvals, mdp)

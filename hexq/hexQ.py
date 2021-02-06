@@ -2,6 +2,7 @@ import random
 import policy.QLearn
 import numpy as np
 from hexq.mdp import MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
+import pickle
 
 
 class HexQ(object):
@@ -45,7 +46,7 @@ class HexQ(object):
         states = set(seq)
         for state in states:
             primitive_mdp = MDP(level=0, state_var=state)
-            primitive_mdp.actions = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
+            primitive_mdp.exits = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
             primitive_mdp.mer = {state}
             primitive_mdp.primitive_states = {state}
             self.mdps[0].append(primitive_mdp)
@@ -70,24 +71,25 @@ class HexQ(object):
         # level 1 instead of level 0
 
         self.explore(level=0, exploration_iterations=self.args.exploration_iterations)
-        assert len(self.mdps[0]) == 77, "there should be {} mdps instead of {} mdps".format(77, len(self.mdps[0]))
 
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
+        assert len(self.mdps[1]) == 5, "got {} mdps in level 1".format(len(self.mdps[1]))
 
         ''' train sub_mdps '''
         self.train_sub_mdps(self.mdps[1])
 
         # level one (rooms)
-        #self.explore(level=1)
+        self.explore(level=1)
 
         # find Markov Equivelant Regions (which should be one)
-        #self.create_sub_mdps(2)
+        self.create_sub_mdps(2)
 
-        #input(self.mdps[2])
-        #for mdp in self.mdps[2]:
-        #    input("MER: {}\nactions: {}\nexits: {}".format(mdp.mer, mdp.actions, mdp.exits))
+        self.train_sub_mdps(self.mdps[2])
+
+        with open('mdps.pickle', 'wb') as handle:
+            pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def train_sub_mdps(self, mdps):
         arrow_list = []
@@ -106,61 +108,87 @@ class HexQ(object):
             mdp = get_mdp(self.mdps, level, s)
             a = mdp.select_random_action()
             s_p, r, d, info = exec_action(self.env, self.mdps, mdp, s, a)
-            # take exit action
-            if level > 0:
-                sub_mdp = get_mdp(self.mdps, level-1, s_p)
-                s_p, exit_r, d, info = exec_action(self.env, self.mdps, sub_mdp, s_p, a.action)
-                r += exit_r
-
-            fill_mdp_properties(self.mdps, mdp, s, a, s_p)
+            next_mdp = get_mdp(self.mdps, level, s_p)
+            mdp.fill_properties(a, next_mdp, r, d)
+            #fill_mdp_properties(self.mdps, mdp, a, next_mdp, r, d)
             if d:
                 s = self.env.reset()
             else:
                 s = s_p
 
-        aggregate_mdp_properties(self.mdps[level])
+        #aggregate_mdp_properties(self.mdps[level])
 
     def create_sub_mdps(self, level):
         mdps_copy = set(self.mdps[level-1].copy())
-        mdps = []
+        mdps = set()
         upper_level_exits = {}
 
         while len(mdps_copy) > 0:
             curr_mdp = random.choice(tuple(mdps_copy))
             mer, exits = set(), set()
             self.dfs(mdps_copy, curr_mdp, level, mer, exits)
-
             state_var = next(iter(mer)).state_var[1:]
             mdp = MDP(level=level, state_var=state_var)
             mdp.mer = mer
             upper_level_exits[mdp] = exits
             for _mdp in mer:
                 mdp.primitive_states.update(_mdp.primitive_states)
-            mdps.append(mdp)
+            mdps.add(mdp)
 
         self.mdps[level] = mdps
+        #if level > 1:
+        #    for mdp in self.mdps[level]:
+        #        input("mdp: {}\nmer: {}\nexits: {}".format(mdp.simple_rep(), [a.simple_rep() for a in mdp.mer], mdp.exits))
 
         # Add MDP Exits/Actions
         for mdp in self.mdps[level]:
             mdp.exits = set()
+            #if level > 1:
+            #    input("upper level exits: {}".format(upper_level_exits[mdp]))
             for s_mdp, exit, n_mdp in upper_level_exits[mdp]:
-                neighbor_mdp = get_mdp(self.mdps, level, n_mdp.state_var)
-                mdp.exits.add(Exit(mdp, exit, neighbor_mdp))
+                #if level > 1:
+                #    input("{}->{}->{}".format(s_mdp.simple_rep(), exit, n_mdp.simple_rep()))
+                #neighbor_mdp = get_mdp(self.mdps, level, n_mdp.state_var)
+                neighbor_mdp = n_mdp.get_upper_mdp(self.mdps) 
+                mdp.exits.add(Exit(mdp, Exit(s_mdp, exit, n_mdp), neighbor_mdp))
 
-        mdp.actions = mdp.exits  # redundant, remove in future
+    def is_exit(self, mdp, neighbor, level):
+        # an exit is a transiton that
+        # 1: causes the MDP to terminate
+        # 2: causes context to change
+        # 3: has a non-stationary trans function
+        # 4: has a non-stationary reward function
+        # 5: transitions between MERs
+
+        for action in mdp.trans_history:
+            if neighbor in mdp.trans_history[action]['states']:
+                # Condition 2
+                if neighbor.state_var[level:] != mdp.state_var[level:]:
+                    return True, action, 2, None
+
+                # Condition 1/5
+                if True in mdp.trans_history[action]['dones']:
+                    return True, action, 1, mdp.trans_history[action]
+
+                # Condition 4
+                if mdp.level < 1:
+                    if len(set(mdp.trans_history[action]['rewards'])) > 1:
+                        return True, action, 4, mdp.trans_history[action]
+
+        return False, None, None, None
 
     def dfs(self, mdp_list, mdp, level, mer, exits):
         if mdp in mdp_list:
             mdp_list.remove(mdp)
         mer.add(mdp)
-
         for neighbor in mdp.adj:
-            if neighbor.state_var[level:] == mdp.state_var[level:]:
+            found_exit, action, condition, info = self.is_exit(mdp, neighbor, level)
+            #if level > 1:
+            #    input("Exit found ? {}: {}->{}->{} condition: {} extra: {}".format(found_exit, mdp.simple_rep(), action, neighbor.simple_rep(), condition, ""))
+                # find exit action
+            if found_exit:
+                exits.add((mdp, action, neighbor))
+            else:
                 if neighbor in mdp_list:
                     self.dfs(mdp_list, neighbor, level, mer, exits)
-            else:
-                # find exit action
-                for exit in mdp.exits:
-                    if neighbor == exit.next_mdp:
-                        new_exit = (mdp, exit, neighbor)
-                        exits.add(new_exit)
+

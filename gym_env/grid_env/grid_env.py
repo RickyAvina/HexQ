@@ -49,11 +49,11 @@ class GridEnv(gym.Env):
         target_reached = self.target_reached()
 
         if target_reached:
-            reward = 0
+            reward = 10
         else:
             reward = -1
 
-        return next_observation, reward, target_reached, dict() 
+        return next_observation, reward, target_reached, dict()
 
     def get_random_start(self, states=None):
         # pick random starting point that isn't in target
