@@ -19,19 +19,22 @@ class Exit(object):
         return hash(self.mdp) + hash(self.next_mdp)
 
 
-class MDP(object):
+class Unhashable_MDP(object):
     '''
     states are a set
     actions are a tuple
     '''
+    def from_hashable(hashable_mdp):
+        unhashable_mdp = Unhashable_MDP(hashable_mdp.level, hashable_mdp.state_var)
+        unhashable_mdp.__dict__ = hashable_mdp.__dict__.copy()
+        return unhashable_mdp
 
     def __init__(self, level, state_var):
         self.state_var = state_var
         self.level = level
 
-        self.mer = set()  # mdps one level under
+        self.mer = frozenset()  # mdps one level under
         self.primitive_states = set()
-        #self.actions = set()   # R => exits (for primitives, key=value)
 
         self.trans_history = {}  # (s, a) -> {'states':  {s_p: count, s_p': count'}}
         #                                     'rewards': {r, r', ...}
@@ -53,6 +56,7 @@ class MDP(object):
     def simple_rep(self):
         return "level {} var {}".format(self.level, self.state_var)
 
+    '''
     def __eq__(self, other):
         if isinstance(other, MDP):
             return (self.level == other.level and self.state_var == other.state_var and self.mer==other.mer)
@@ -61,6 +65,7 @@ class MDP(object):
 
     def __hash__(self):
         return hash(self.__repr__())
+    '''
 
     def __lt__(self, other):
         if self.level < other.level:
@@ -81,7 +86,7 @@ class MDP(object):
         if self != next_mdp:
             self.adj.add(next_mdp)
             #next_mdp.adj.add(self)
-
+        
         # fill in trans history
         if a not in self.trans_history:
             self.trans_history[a] = {'states': {next_mdp: 1}}
@@ -89,7 +94,7 @@ class MDP(object):
             self.trans_history[a]['states'][next_mdp] = 1
         else:
             self.trans_history[a]['states'][next_mdp] += 1
-
+        
         if 'rewards' not in self.trans_history[a]:
             self.trans_history[a]['rewards'] = []
         self.trans_history[a]['rewards'].append(r)
@@ -107,44 +112,6 @@ class MDP(object):
         raise ValueError("MDP {} is not a sub mdp of an mdp at level {}".format(self, self.level+1))
         return None
 
-    '''
-    def add_trans(self, s, a, s_p):
-        # transitions are deterministic after primitive level
-        # states are also known, however, it is kept for convenience
-
-        # record states
-        self.states.add(s)
-
-        # fill in adj dictionary
-        if s not in self.adj:
-            self.adj[s] = set()
-        self.adj[s].add(s_p)
-
-        # fill in transition probabilities and entries/exits
-        if s != self.target:
-            if (s, a) not in self.trans_history:
-                self.trans_history[(s, a)] = {s_p: 1}
-            elif s_p not in self.trans_history[(s, a)]:
-                self.trans_history[(s, a)][s_p] = 1
-            else:
-                self.trans_history[(s, a)][s_p] += 1
-
-            if s[1] != s_p[1]:  # exit/entry
-                self.exit_pairs.add((s, s_p))
-                self.exits.add((s, a))
-                self.entries.add(s_p)
-
-    def count_to_probs(self):
-        trans_probs = {}
-        for s_a in self.trans_history:
-            if s_a not in trans_probs:
-                trans_probs[s_a] = {}
-            total_count = sum(self.trans_history[s_a]['states'].values())
-            for s_p in self.trans_history[s_a]['states']:
-                trans_probs[s_a][s_p] = self.trans_history[s_a]['states'][s_p] / total_count
-
-        return trans_probs
-    '''
     def find_MERs(self):
         ''' MERs are just states with deterministic intra-region transitions '''
         states = self.states.copy()
@@ -167,9 +134,29 @@ class MDP(object):
                     self.bfs(states=states, s=neighbor, mer=mer)
 
 
+class Hashable_MDP(Unhashable_MDP):
+    def from_unhashable(unhashable_mdp):
+        hashable_mdp = Hashable_MDP(unhashable_mdp.level, unhashable_mdp.state_var)
+        hashable_mdp.__dict__ = unhashable_mdp.__dict__.copy()
+        return hashable_mdp
+
+    def __init__(self, level, state_var):
+        super().__init__(level, state_var)
+
+    def __eq__(self, other):
+        if isinstance(other, Hashable_MDP):
+            return (self.level == other.level and self.state_var == other.state_var and self.mer==other.mer)
+        else:
+            return False
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+
 """ MDP Utility Methods """
 def fill_mdp_properties(mdps, mdp, s, a, s_p, r, d):
     # fill in MDPs adjacency set
+
     if s != s_p:
         adj_mdp = get_mdp(mdps, mdp.level, s_p)
         mdp.adj.add(adj_mdp)
@@ -202,17 +189,6 @@ def fill_mdp_properties(mdps, mdp, s, a, s_p, r, d):
 def aggregate_mdp_properties(mdps):
     for mdp in mdps:
         mdp.trans_probs = mdp.count_to_probs()
-
-'''
-def get_upper_mdp(self, mdps):
-    # get mdp at level l+1
-    for _mdp in self.mdps[self.level+1]:
-        if self in _mdp.mer:
-            return _mdp
-
-    raise ValueError("MDP {} is not a sub mdp of an mdp at level {}".format(mdp, mdp.level+1))
-    return None
-'''
 
 def get_mdp(mdps, level, s):
     sub_mdp = None

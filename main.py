@@ -8,13 +8,8 @@ from tensorboardX import SummaryWriter
 from render.gui import GUI
 import render.render_consts as Consts
 import sys
+import logging
 
-
-# Should move this to a Constants file:
-#exits = {(14, 0), (22, 0),
-#         (10, 1), (22, 1),
-#         (2, 2), (14, 2), (2, 3),
-#         (10, 3)}
 
 def main(args):
     # Create directories
@@ -125,6 +120,9 @@ if __name__ == "__main__":
 
     # Meta Arguments
     parser.add_argument(
+        "--binary_file", nargs='?', type=str, default="",
+        help="MDPs pickle file generated from training")
+    parser.add_argument(
         '--render', action='store_true',
         help="If True, render GUI")
     parser.add_argument(
@@ -133,5 +131,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.log_name = "env:GridWorld-v0-s_prefix::%s" % (args.prefix)
-
+    logging.basicConfig(level='INFO')
     main(args=args)

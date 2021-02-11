@@ -1,8 +1,9 @@
 import random
 import policy.QLearn
 import numpy as np
-from hexq.mdp import MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
+from hexq.mdp import Unhashable_MDP, Hashable_MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
 import pickle
+import os
 
 
 class HexQ(object):
@@ -13,12 +14,13 @@ class HexQ(object):
         self.args = args
         self.mdps = {}  # level => [MDP,.. ]
         self.state_dim = args.state_dim
-
-        self._init_mdps()
-        self.alg()
+        if self.args.binary_file is None or self.args.binary_file=="":
+            self._init_mdps()
+            self.alg()
+        else:
+            self.test_policy()
 
     def _init_mdps(self):
-        MDP.env = self.env
         self.mdps[0] = []
 
     def find_freq(self):
@@ -45,9 +47,9 @@ class HexQ(object):
 
         states = set(seq)
         for state in states:
-            primitive_mdp = MDP(level=0, state_var=state)
+            primitive_mdp = Hashable_MDP(level=0, state_var=state)
             primitive_mdp.exits = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
-            primitive_mdp.mer = {state}
+            primitive_mdp.mer = frozenset({state})
             primitive_mdp.primitive_states = {state}
             self.mdps[0].append(primitive_mdp)
 
@@ -57,6 +59,38 @@ class HexQ(object):
                 freq[i].add(state[i])
         sorted_order = np.argsort([len(arr) for arr in freq])
         return sorted_order
+
+    def test_policy(self):
+        assert os.path.exists(self.args.binary_file), "file {} doesn't exist!".format(self.args.binary_file)
+        mdp_binary = open(self.args.binary_file)
+        self.mdps = pickle.load(mdp_binary)
+        input(self.mdps)
+        ''' 
+        mdp1 = Hashable_MDP(0, (0, 1))
+        mdp2 = Hashable_MDP(1, (0, ))
+        mdp1.adj.add(mdp2)
+        mdp2.adj.add(mdp1)
+        
+        u_mdp1 = Unhashable_MDP.from_hashable(mdp1)
+        u_mdp2 = Unhashable_MDP.from_hashable(mdp2)
+        input(u_mdp1)
+        input(u_mdp2)
+        # convert Hashable to unhashable MDPs
+        p_on = open("test.pickle", "wb")
+        pickle.dump({u_mdp1, u_mdp2}, p_on)
+        p_on.close()
+        
+        p_off = open("test.pickle", "rb")
+        pickled1, pickled2 = pickle.load(p_off)
+        r_mdp1 = Hashable_MDP.from_unhashable(pickled1)
+        r_mdp2 = Hashable_MDP.from_unhashable(pickled2)
+        input(r_mdp1)
+        input(r_mdp2)
+        # try to fix this problem
+        pickle_dict = open(self.args.binary_file, 'rb')
+        self.mdps = pickle.load(pickle_dict)
+        input(self.mdps)
+        '''
 
     def alg(self):
         # Find freq ordering of vars and initialize lowest level mdps
@@ -71,11 +105,21 @@ class HexQ(object):
         # level 1 instead of level 0
 
         self.explore(level=0, exploration_iterations=self.args.exploration_iterations)
+        '''
+        p_on = open("test.pickle", "wb")
+        pickle.dump(self.mdps, p_on)
+        p_on.close()
+
+        p_off = open("test.pickle", "rb")
+        emp = pickle.load(p_off)
+        print("pickled object:\n")
+        input(emp)  
+        '''
 
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
 
-        assert len(self.mdps[1]) == 5, "got {} mdps in level 1".format(len(self.mdps[1]))
+        #assert len(self.mdps[1]) == 5, "got {} mdps in level 1".format(len(self.mdps[1]))
 
         ''' train sub_mdps '''
         self.train_sub_mdps(self.mdps[1])
@@ -88,9 +132,24 @@ class HexQ(object):
 
         self.train_sub_mdps(self.mdps[2])
 
-        with open('mdps.pickle', 'wb') as handle:
-            pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        if not os.path.exists("./binaries"):
+            os.makedirs("./binaries")
 
+        #p_on = open("binaries/mdps.pickle
+        with open('binaries/mdps.pickle', 'wb') as handle:
+            # convert MDPs to Unhashable MDPs to pickle
+            unhashable_mdps = {}
+            for level in self.mdps:
+                level_set = set()
+                for mdp in self.mdps[level]:
+                    input("MDP: {}".format(mdp))
+                    unhashable_mdp = Unhashable_MDP.from_hashable(mdp)
+                    input("unhashable mdp: {}".format(unhashable_mdp))
+                unhashable_mdps[level] = level_set
+            input(unhashable_mdps)
+            pickle.dump(unhashable_mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        handle.close()
+        print("FINISHED hashing them!")
     def train_sub_mdps(self, mdps):
         arrow_list = []
 
@@ -109,8 +168,9 @@ class HexQ(object):
             a = mdp.select_random_action()
             s_p, r, d, info = exec_action(self.env, self.mdps, mdp, s, a)
             next_mdp = get_mdp(self.mdps, level, s_p)
+            mdp.adj.add(next_mdp)
             mdp.fill_properties(a, next_mdp, r, d)
-            #fill_mdp_properties(self.mdps, mdp, a, next_mdp, r, d)
+
             if d:
                 s = self.env.reset()
             else:
@@ -128,32 +188,24 @@ class HexQ(object):
             mer, exits = set(), set()
             self.dfs(mdps_copy, curr_mdp, level, mer, exits)
             state_var = next(iter(mer)).state_var[1:]
-            mdp = MDP(level=level, state_var=state_var)
-            mdp.mer = mer
+            mdp = Hashable_MDP(level=level, state_var=state_var)
+            mdp.mer = frozenset(mer)
             upper_level_exits[mdp] = exits
             for _mdp in mer:
                 mdp.primitive_states.update(_mdp.primitive_states)
             mdps.add(mdp)
 
         self.mdps[level] = mdps
-        #if level > 1:
-        #    for mdp in self.mdps[level]:
-        #        input("mdp: {}\nmer: {}\nexits: {}".format(mdp.simple_rep(), [a.simple_rep() for a in mdp.mer], mdp.exits))
 
         # Add MDP Exits/Actions
         for mdp in self.mdps[level]:
             mdp.exits = set()
-            #if level > 1:
-            #    input("upper level exits: {}".format(upper_level_exits[mdp]))
             for s_mdp, exit, n_mdp in upper_level_exits[mdp]:
-                #if level > 1:
-                #    input("{}->{}->{}".format(s_mdp.simple_rep(), exit, n_mdp.simple_rep()))
-                #neighbor_mdp = get_mdp(self.mdps, level, n_mdp.state_var)
                 neighbor_mdp = n_mdp.get_upper_mdp(self.mdps) 
                 mdp.exits.add(Exit(mdp, Exit(s_mdp, exit, n_mdp), neighbor_mdp))
 
     def is_exit(self, mdp, neighbor, level):
-        # an exit is a transiton that
+        # an exit is a transition that
         # 1: causes the MDP to terminate
         # 2: causes context to change
         # 3: has a non-stationary trans function
@@ -183,12 +235,8 @@ class HexQ(object):
         mer.add(mdp)
         for neighbor in mdp.adj:
             found_exit, action, condition, info = self.is_exit(mdp, neighbor, level)
-            #if level > 1:
-            #    input("Exit found ? {}: {}->{}->{} condition: {} extra: {}".format(found_exit, mdp.simple_rep(), action, neighbor.simple_rep(), condition, ""))
-                # find exit action
             if found_exit:
                 exits.add((mdp, action, neighbor))
             else:
                 if neighbor in mdp_list:
                     self.dfs(mdp_list, neighbor, level, mer, exits)
-
