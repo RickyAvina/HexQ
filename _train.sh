@@ -19,7 +19,7 @@ python3 -m pip install -r requirements.txt
 
 # Begin experiment
 print_header "Training network"
-python3.6 main.py \
+python3 main.py \
 --prefix "" \
 --state_dim 2 \
 --rows 5 \

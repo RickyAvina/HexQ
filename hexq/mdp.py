@@ -19,16 +19,11 @@ class Exit(object):
         return hash(self.mdp) + hash(self.next_mdp)
 
 
-class Unhashable_MDP(object):
+class MDP(object):
     '''
     states are a set
     actions are a tuple
     '''
-    def from_hashable(hashable_mdp):
-        unhashable_mdp = Unhashable_MDP(hashable_mdp.level, hashable_mdp.state_var)
-        unhashable_mdp.__dict__ = hashable_mdp.__dict__.copy()
-        return unhashable_mdp
-
     def __init__(self, level, state_var):
         self.state_var = state_var
         self.level = level
@@ -51,7 +46,7 @@ class Unhashable_MDP(object):
         self.policies = dict()  # {exit: Q-val dict}
 
     def __repr__(self):
-        return "level {} var {} mer: {}".format(self.level, self.state_var, self.mer)
+        return "level {} var {}".format(self.level, self.state_var)
 
     def simple_rep(self):
         return "level {} var {}".format(self.level, self.state_var)
@@ -132,26 +127,6 @@ class Unhashable_MDP(object):
             for neighbor in self.adj[s]:
                 if neighbor in states and (s, neighbor) not in self.exit_pairs:
                     self.bfs(states=states, s=neighbor, mer=mer)
-
-
-class Hashable_MDP(Unhashable_MDP):
-    def from_unhashable(unhashable_mdp):
-        hashable_mdp = Hashable_MDP(unhashable_mdp.level, unhashable_mdp.state_var)
-        hashable_mdp.__dict__ = unhashable_mdp.__dict__.copy()
-        return hashable_mdp
-
-    def __init__(self, level, state_var):
-        super().__init__(level, state_var)
-
-    def __eq__(self, other):
-        if isinstance(other, Hashable_MDP):
-            return (self.level == other.level and self.state_var == other.state_var and self.mer==other.mer)
-        else:
-            return False
-
-    def __hash__(self):
-        return hash(self.__repr__())
-
 
 """ MDP Utility Methods """
 def fill_mdp_properties(mdps, mdp, s, a, s_p, r, d):

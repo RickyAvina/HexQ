@@ -1,7 +1,7 @@
 import random
 import policy.QLearn
 import numpy as np
-from hexq.mdp import Unhashable_MDP, Hashable_MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
+from hexq.mdp import MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
 import pickle
 import os
 
@@ -47,7 +47,7 @@ class HexQ(object):
 
         states = set(seq)
         for state in states:
-            primitive_mdp = Hashable_MDP(level=0, state_var=state)
+            primitive_mdp = MDP(level=0, state_var=state)
             primitive_mdp.exits = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
             primitive_mdp.mer = frozenset({state})
             primitive_mdp.primitive_states = {state}
@@ -136,6 +136,7 @@ class HexQ(object):
             os.makedirs("./binaries")
 
         #p_on = open("binaries/mdps.pickle
+        '''
         with open('binaries/mdps.pickle', 'wb') as handle:
             # convert MDPs to Unhashable MDPs to pickle
             unhashable_mdps = {}
@@ -143,13 +144,15 @@ class HexQ(object):
                 level_set = set()
                 for mdp in self.mdps[level]:
                     input("MDP: {}".format(mdp))
-                    unhashable_mdp = Unhashable_MDP.from_hashable(mdp)
+                    unhashable_mdp = om_hashable(mdp)
                     input("unhashable mdp: {}".format(unhashable_mdp))
                 unhashable_mdps[level] = level_set
             input(unhashable_mdps)
             pickle.dump(unhashable_mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
         handle.close()
         print("FINISHED hashing them!")
+        '''
+
     def train_sub_mdps(self, mdps):
         arrow_list = []
 
@@ -188,7 +191,7 @@ class HexQ(object):
             mer, exits = set(), set()
             self.dfs(mdps_copy, curr_mdp, level, mer, exits)
             state_var = next(iter(mer)).state_var[1:]
-            mdp = Hashable_MDP(level=level, state_var=state_var)
+            mdp = MDP(level=level, state_var=state_var)
             mdp.mer = frozenset(mer)
             upper_level_exits[mdp] = exits
             for _mdp in mer:

@@ -9,3 +9,4 @@ logs
 logs/
 env/
 __pycache__/
+.idea/
