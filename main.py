@@ -9,6 +9,7 @@ from render.gui import GUI
 import render.render_consts as Consts
 import sys
 import logging
+import pathlib
 
 
 def main(args):
@@ -17,6 +18,7 @@ def main(args):
         os.makedirs("./logs")
     if not os.path.exists("./pytorch_models"):
         os.makedirs("./pytorch_models")
+    pathlib.Path(args.binary_file).parents[0].mkdir(parents=False, exist_ok=True)
 
     # Set logging
     # TODO log and tb_writer variables are not used.
@@ -128,6 +130,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '--verbose', action='store_true',
         help='If True, show progress visually')
+    parser.add_argument(
+        '--test', action='store_true',
+        help='If set, algorithm will test policy stored at `binary_file`')
 
     args = parser.parse_args()
     args.log_name = "env:GridWorld-v0-s_prefix::%s" % (args.prefix)

@@ -14,14 +14,10 @@ class HexQ(object):
         self.args = args
         self.mdps = {}  # level => [MDP,.. ]
         self.state_dim = args.state_dim
-        if self.args.binary_file is None or self.args.binary_file=="":
-            self._init_mdps()
-            self.alg()
-        else:
+        if self.args.test:
             self.test_policy()
-
-    def _init_mdps(self):
-        self.mdps[0] = []
+        else:
+            self.alg()
 
     def find_freq(self):
         """Agent randomly explores env randomly for period of time.
@@ -51,7 +47,7 @@ class HexQ(object):
             primitive_mdp.exits = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
             primitive_mdp.mer = frozenset({state})
             primitive_mdp.primitive_states = {state}
-            self.mdps[0].append(primitive_mdp)
+            self.mdps[0].add(primitive_mdp)
 
         freq = [set() for _ in range(self.state_dim)]
         for state in seq:
@@ -96,6 +92,8 @@ class HexQ(object):
         # Find freq ordering of vars and initialize lowest level mdps
         # TODO that maybe sorting order needs to be opposite such that
         # most frequent variable is in the first order
+        self.mdps[0] = set()
+
         freq = self.find_freq()
 
         # TODO I guess line 2, 3, 4 in Table 5.1 are missing?! Woot woot?
@@ -105,21 +103,9 @@ class HexQ(object):
         # level 1 instead of level 0
 
         self.explore(level=0, exploration_iterations=self.args.exploration_iterations)
-        '''
-        p_on = open("test.pickle", "wb")
-        pickle.dump(self.mdps, p_on)
-        p_on.close()
-
-        p_off = open("test.pickle", "rb")
-        emp = pickle.load(p_off)
-        print("pickled object:\n")
-        input(emp)  
-        '''
 
         # find Markov Equivalent Reigons
         self.create_sub_mdps(1)
-
-        #assert len(self.mdps[1]) == 5, "got {} mdps in level 1".format(len(self.mdps[1]))
 
         ''' train sub_mdps '''
         self.train_sub_mdps(self.mdps[1])
@@ -132,26 +118,12 @@ class HexQ(object):
 
         self.train_sub_mdps(self.mdps[2])
 
-        if not os.path.exists("./binaries"):
-            os.makedirs("./binaries")
-
-        #p_on = open("binaries/mdps.pickle
-        '''
-        with open('binaries/mdps.pickle', 'wb') as handle:
-            # convert MDPs to Unhashable MDPs to pickle
-            unhashable_mdps = {}
-            for level in self.mdps:
-                level_set = set()
-                for mdp in self.mdps[level]:
-                    input("MDP: {}".format(mdp))
-                    unhashable_mdp = om_hashable(mdp)
-                    input("unhashable mdp: {}".format(unhashable_mdp))
-                unhashable_mdps[level] = level_set
-            input(unhashable_mdps)
-            pickle.dump(unhashable_mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(self.args.binary_file, 'wb') as handle:
+            pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
         handle.close()
-        print("FINISHED hashing them!")
-        '''
+
+        if self.args.verbose:
+            print("Finished pickling MDPs, saved at {}!".format(self.args.binary_file))
 
     def train_sub_mdps(self, mdps):
         arrow_list = []
@@ -219,25 +191,25 @@ class HexQ(object):
             if neighbor in mdp.trans_history[action]['states']:
                 # Condition 2
                 if neighbor.state_var[level:] != mdp.state_var[level:]:
-                    return True, action, 2, None
+                    return True, action, 2
 
                 # Condition 1/5
                 if True in mdp.trans_history[action]['dones']:
-                    return True, action, 1, mdp.trans_history[action]
+                    return True, action, 1
 
                 # Condition 4
                 if mdp.level < 1:
                     if len(set(mdp.trans_history[action]['rewards'])) > 1:
-                        return True, action, 4, mdp.trans_history[action]
+                        return True, action, 4
 
-        return False, None, None, None
+        return False, None, None
 
     def dfs(self, mdp_list, mdp, level, mer, exits):
         if mdp in mdp_list:
             mdp_list.remove(mdp)
         mer.add(mdp)
         for neighbor in mdp.adj:
-            found_exit, action, condition, info = self.is_exit(mdp, neighbor, level)
+            found_exit, action, condition = self.is_exit(mdp, neighbor, level)
             if found_exit:
                 exits.add((mdp, action, neighbor))
             else:
