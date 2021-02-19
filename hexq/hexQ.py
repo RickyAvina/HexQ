@@ -59,8 +59,14 @@ class HexQ(object):
     def test_policy(self):
         assert os.path.exists(self.args.binary_file), "file {} doesn't exist!".format(self.args.binary_file)
         mdp_binary = open(self.args.binary_file)
-        self.mdps = pickle.load(mdp_binary)
-        input(self.mdps)
+        mdps = pickle.load(mdp_binary)
+        
+        while True:
+            # select greedy actions and reset if necessary
+            s = self.env.reset()
+            mdp = get_mdp(mdps, 2, s)
+            #best_action = max_q(mdp.policies
+            #exec_action(self.env, mdps, mdp, s, 
         ''' 
         mdp1 = Hashable_MDP(0, (0, 1))
         mdp2 = Hashable_MDP(1, (0, ))
@@ -117,6 +123,12 @@ class HexQ(object):
         self.create_sub_mdps(2)
 
         self.train_sub_mdps(self.mdps[2])
+        '''
+        for mdp in self.mdps[2]:
+            input("mdp: {} mer: {}".format(mdp, mdp.mer))
+            for exit in mdp.policies:
+                input("exit: {}".format(exit))
+        '''
 
         with open(self.args.binary_file, 'wb') as handle:
             pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)

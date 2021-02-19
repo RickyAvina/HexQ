@@ -26,6 +26,7 @@ python3 main.py \
 --cols 5 \
 --x_rooms 2 \
 --y_rooms 2 \
+--start 0 0 \
 --target 3 \
 --gui_width 800 \
 --gui_height 800 \

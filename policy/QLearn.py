@@ -3,7 +3,7 @@ from hexq.mdp import get_mdp, exec_action
 from tqdm import tqdm
 
 
-def qlearn(env, mdps,  mdp, args):
+def qlearn(env, mdps, mdp, args):
     '''
     Implements Q-Learning to help agents find a policy to reach all
     of the exits in an mdp. Fills in an mdp's policy attribute which has the form:
@@ -31,24 +31,24 @@ def qlearn(env, mdps,  mdp, args):
             print("finding policy for exit: {}".format(exit))
 
         mdp.policies[exit] = dict()
-
+        #if mdp.level > 1:
+        #    input("exit: " + str(exit))
         for sub_mdp in mdp.mer:
             mdp.policies[exit][sub_mdp] = dict()
+            #if mdp.level > 1:
+            #    input("sub_mdp: " + str(sub_mdp))
             for action in sub_mdp.exits:
                 mdp.policies[exit][sub_mdp][action] = args.init_q  # Initialize Q-Vals
-#        if mdp.level > 1:
-#            for key in mdp.policies:
-#                input("exit: {}".format(key))
-#                for sub_mdp in mdp.policies[key]:
-#                    input("sub_mdp: {}".format(sub_mdp.simple_rep()))
-#                    for action in mdp.policies[key][sub_mdp]:
-#                        input("action: {}".format(action))
-
+                #if mdp.level > 1:
+                #    input("action: " + str(action))
         decay_count = 0
+ 
         for step in tqdm(range(args.exploration_iterations//mdp.level), disable=(not args.verbose)):
-
             # initialize pos in MER
-            s = env.reset_in(mdp.primitive_states)
+            if mdp.level < 2:
+                s = env.reset_in(mdp.primitive_states)
+            else:
+                s = env.reset_in({args.start})
             sub_mdp = get_mdp(mdps, mdp.level-1, s)
             cum_reward = 0
             decay_count += 1
@@ -59,12 +59,11 @@ def qlearn(env, mdps,  mdp, args):
             while sub_mdp != exit.action.next_mdp:
                 if steps_taken > args.max_steps:
                     break
-                #if mdp.level > 1:
-                #    input("exit: {}\nsub_mdp: {}\nsub_mdp actions: {}\nsub_mdps exits: {}".format(exit, sub_mdp.simple_rep(), sub_mdp.actions, sub_mdp.exits))
                 a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_iterations), mdp.policies[exit])
                 s_p, r, d, info = exec_action(env, mdps, sub_mdp, s, a)
                 next_sub_mdp = get_mdp(mdps, mdp.level-1, s_p)
-
+                #if mdp.level > 1:
+                #    input("{} --> {} --> {} r: {} d: {}".format(sub_mdp, a, next_sub_mdp, r, d))
                 if next_sub_mdp not in mdp.mer:
                     if next_sub_mdp == exit.action.next_mdp:
                         r = 0
@@ -111,13 +110,6 @@ def get_arrows(qvals):
 
 def max_q(exit_qvals, mdp):
     return max(exit_qvals[mdp], key=lambda k: exit_qvals[mdp].get(k))
-
-'''
-def get_non_exit_action(mdp, a):
-    for exit in mdp.exits:
-        if exit.mdp == mdp and a == exit.action:
-            return get_non_exit_action(mdp, random.choice(tuple(mdp.actions)))
-'''
 
 def get_action(mdp, p, exit_qvals):
     if random.random() > p:
