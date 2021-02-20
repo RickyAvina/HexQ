@@ -115,7 +115,9 @@ class HexQ(object):
 
         ''' train sub_mdps '''
         self.train_sub_mdps(self.mdps[1])
-
+        
+        while True:
+            pass
         # level one (rooms)
         self.explore(level=1)
 
@@ -142,8 +144,7 @@ class HexQ(object):
 
         for mdp in mdps:
             arrows = policy.QLearn.qlearn(env=self.env, mdps=self.mdps, mdp=mdp, args=self.args)
-            arrow_list.append(arrows)
-
+            arrow_list.extend(arrows)
         if self.env.gui:
             self.env.gui.render_q_values(arrow_list)
 

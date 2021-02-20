@@ -203,11 +203,10 @@ class GUI():
 
             if not queue.empty():
                 event = queue.get()
-
                 if event.kind == EventType.QVAL:
                     exit_square = self.get_square(event.data['exit'])
                     exit_square.color = Consts.RED
-                    arrow_squares = self.add_arrows(event.data['mdps'])
+                    arrow_squares = self.add_arrows(event.data['states'])
                     self.container.render()
                     pygame.display.update()
 
@@ -239,9 +238,8 @@ class GUI():
         return square
 
     def render_q_values(self, arrow_list):
-        for arrows in arrow_list:
-            for exit in arrows:
-                self.queue.put(Event(EventType.QVAL, {'exit': exit, 'mdps': arrows[exit]}))
+        for arrow_dict in arrow_list:
+            self.queue.put(Event(EventType.QVAL, {'exit': arrow_dict['exit'], 'states': arrow_dict['states']}))
 
     def add_arrows(self, q_values):
         '''
