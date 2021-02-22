@@ -158,6 +158,7 @@ def get_square(container, coord):
 class EventType(enum.Enum):
     QUIT = 0
     QVAL = 1
+    POS  = 2
 
 class Event():
     def __init__(self, kind, data):
@@ -209,23 +210,22 @@ class GUI():
                     arrow_squares = self.add_arrows(event.data['states'])
                     self.container.render()
                     pygame.display.update()
-
-                    skip = False
-                    while not skip:
-                        for event in pygame.event.get():
-                            if event.type == pygame.QUIT:
-                                self.run = False
-                                skip = True
-                                break
-                            elif event.type == pygame.MOUSEBUTTONDOWN:
-                                skip = True
-                                break
-
+                    
+                    # wait for click
+                    self.wait_for_click()
+                    
                     # reset squares
                     exit_square.color = Consts.GREEN
                     for square in arrow_squares:
                         square.arrow = None
-
+                
+                if event.kind == EventType.POS:
+                    self.container.render()
+                    self.agent.render(event.data)
+                    pygame.display.update()
+                    
+                    # wait for click (could be made a cli arg) 
+                    self.wait_for_click() 
         pygame.quit()
 
     def get_square(self, coord):
@@ -241,6 +241,9 @@ class GUI():
         for arrow_dict in arrow_list:
             self.queue.put(Event(EventType.QVAL, {'exit': arrow_dict['exit'], 'states': arrow_dict['states']}))
 
+    def render_agent(self, loc):
+        self.queue.put(Event(EventType.POS, loc))
+
     def add_arrows(self, q_values):
         '''
         q_values are in format {state_var, arrow}
@@ -252,14 +255,14 @@ class GUI():
             squares.append(square)
         return squares
 
-def wait_for_click():
-    skip = False
-    while not skip:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                skip = True
-                sys.exit()
-                break
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                skip = True
-                break
+    def wait_for_click(self): 
+        skip = False
+        while not skip:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.run = False
+                    skip = True
+                    break
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    skip = True
+                    break

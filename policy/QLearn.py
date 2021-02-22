@@ -86,11 +86,11 @@ def qlearn(env, mdps, mdp, args):
 
             if len(history) > 0:
                 update_q_vals(args, mdp.policies[exit], history)
-
+    
     if mdp.level == 1:
         return get_arrows(mdp.policies)
     else:
-        return []
+        return [] 
 
 def max_q(exit_qvals):
     return max(exit_qvals, key=lambda k: exit_qvals.get(k))
