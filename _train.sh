@@ -40,5 +40,4 @@ python3 main.py \
 --max_steps 500 \
 --binary_file "binaries/mdps.pickle" \
 --verbose \
---render \
---test
+--render 

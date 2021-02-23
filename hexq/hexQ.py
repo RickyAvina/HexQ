@@ -1,7 +1,7 @@
 import random
 import policy.QLearn
 import numpy as np
-from hexq.mdp import MDP, Exit, get_mdp, fill_mdp_properties, aggregate_mdp_properties, exec_action
+from hexq.mdp import MDP, Exit, get_mdp, aggregate_mdp_properties, exec_action
 import pickle
 import os
 
@@ -75,35 +75,6 @@ class HexQ(object):
                     best_exit = exit
             s_p, r, d, info = exec_action(self.env, mdps, mdp, s, best_exit, True)
             
-            #best_action = max_q(mdp.policies
-            #exec_action(self.env, mdps, mdp, s, 
-        ''' 
-        mdp1 = Hashable_MDP(0, (0, 1))
-        mdp2 = Hashable_MDP(1, (0, ))
-        mdp1.adj.add(mdp2)
-        mdp2.adj.add(mdp1)
-        
-        u_mdp1 = Unhashable_MDP.from_hashable(mdp1)
-        u_mdp2 = Unhashable_MDP.from_hashable(mdp2)
-        input(u_mdp1)
-        input(u_mdp2)
-        # convert Hashable to unhashable MDPs
-        p_on = open("test.pickle", "wb")
-        pickle.dump({u_mdp1, u_mdp2}, p_on)
-        p_on.close()
-        
-        p_off = open("test.pickle", "rb")
-        pickled1, pickled2 = pickle.load(p_off)
-        r_mdp1 = Hashable_MDP.from_unhashable(pickled1)
-        r_mdp2 = Hashable_MDP.from_unhashable(pickled2)
-        input(r_mdp1)
-        input(r_mdp2)
-        # try to fix this problem
-        pickle_dict = open(self.args.binary_file, 'rb')
-        self.mdps = pickle.load(pickle_dict)
-        input(self.mdps)
-        '''
-
     def alg(self):
         # Find freq ordering of vars and initialize lowest level mdps
         # TODO that maybe sorting order needs to be opposite such that
@@ -111,36 +82,26 @@ class HexQ(object):
         self.mdps[0] = set()
 
         freq = self.find_freq()
-
+        # state representation needs to be converted to frequency conversion
+        # example state rep is (pos, gas)
         # TODO I guess line 2, 3, 4 in Table 5.1 are missing?! Woot woot?
 
         # level zero (primitive actions)
         # TODO Looking at the paper, it seems like they refer to the most bottom level to be
         # level 1 instead of level 0
-
-        self.explore(level=0, exploration_iterations=self.args.exploration_iterations)
-
-        # find Markov Equivalent Reigons
-        self.create_sub_mdps(1)
-
-        ''' train sub_mdps '''
-        self.train_sub_mdps(self.mdps[1])
+        for level in range(self.args.state_dim):
+            self.explore(level=level, exploration_iterations=self.args.exploration_iterations)
+            self.create_sub_mdps(level+1)
+            self.train_sub_mdps(self.mdps[level+1])
         
-        # level one (rooms)
-        self.explore(level=1)
 
-        # find Markov Equivelant Regions (which should be one)
-        self.create_sub_mdps(2)
-
-        self.train_sub_mdps(self.mdps[2])
-        
         with open(self.args.binary_file, 'wb') as handle:
             pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
         handle.close()
 
         pickle_dict = open(self.args.binary_file, 'rb')
         r_mdps = pickle.load(pickle_dict)
-        input(r_mdps)
+        
         if self.args.verbose:
             print("Finished pickling MDPs, saved at {}!".format(self.args.binary_file))
 
@@ -161,7 +122,6 @@ class HexQ(object):
             a = mdp.select_random_action()
             s_p, r, d, info = exec_action(self.env, self.mdps, mdp, s, a)
             next_mdp = get_mdp(self.mdps, level, s_p)
-            mdp.adj.add(next_mdp)
             mdp.fill_properties(a, next_mdp, r, d)
 
             if d:
@@ -169,6 +129,7 @@ class HexQ(object):
             else:
                 s = s_p
 
+        # Because grid world is deterministic, this line is commented
         #aggregate_mdp_properties(self.mdps[level])
 
     def create_sub_mdps(self, level):

@@ -33,10 +33,9 @@ class MDP(object):
         self.primitive_states = set()
 
         self.trans_history = {}  # (s, a) -> {'states':  {s_p: count, s_p': count'}}
-        #                                     'rewards': {r, r', ...}
-        #                                     'dones':   {d, d', ...}
+                                             #'rewards': {r, r', ...}
+                                             # 'dones':   {d, d', ...}
 
-        # In future, could be a frozen dict {s: a: {s_p: count, s_p': count'}, a': {}}
         self.adj = set()
         self.trans_probs = None
 
@@ -52,17 +51,6 @@ class MDP(object):
     def simple_rep(self):
         return "level {} var {}".format(self.level, self.state_var)
 
-    '''
-    def __eq__(self, other):
-        if isinstance(other, MDP):
-            return (self.level == other.level and self.state_var == other.state_var and self.mer==other.mer)
-        else:
-            return False
-
-    def __hash__(self):
-        return hash(self.__repr__())
-    '''
-
     def __lt__(self, other):
         if self.level < other.level:
             return True
@@ -72,16 +60,13 @@ class MDP(object):
             return self.state_var < other.state_var
 
     def select_random_action(self):
-        #if self.level == 0:
-        #    return random.choice(tuple(self.actions))
         assert len(self.exits) > 0, "actions are empty, mdp: {}".format(self)
         return random.choice(tuple(self.exits))
 
     def fill_properties(self, a, next_mdp, r, d):
         # fill adjacency set
         if self != next_mdp:
-            self.adj.add(next_mdp)
-            #next_mdp.adj.add(self)
+            self.adj.add(next_mdp)  # directed edge
         
         # fill in trans history
         if a not in self.trans_history:
@@ -108,60 +93,8 @@ class MDP(object):
         raise ValueError("MDP {} is not a sub mdp of an mdp at level {}".format(self, self.level+1))
         return None
 
-    def find_MERs(self):
-        ''' MERs are just states with deterministic intra-region transitions '''
-        states = self.states.copy()
-        mers = []
-
-        while len(states) > 0:
-            s = random.choice(tuple(states))
-            mer = {s}
-            self.bfs(states, s, mer)
-            mers.append(mer)
-
-        return mers
-
-    def bfs(self, states, s, mer):
-        if s in states:
-            states.remove(s)
-            mer.add(s)
-            for neighbor in self.adj[s]:
-                if neighbor in states and (s, neighbor) not in self.exit_pairs:
-                    self.bfs(states=states, s=neighbor, mer=mer)
 
 """ MDP Utility Methods """
-def fill_mdp_properties(mdps, mdp, s, a, s_p, r, d):
-    # fill in MDPs adjacency set
-
-    if s != s_p:
-        adj_mdp = get_mdp(mdps, mdp.level, s_p)
-        mdp.adj.add(adj_mdp)
-        adj_mdp.adj.add(mdp)
-
-    # USE MDP INSTEAD OF S
-
-    # fill in MDPs transition count
-    if (s, a) not in mdp.trans_history:
-        mdp.trans_history[(s, a)] = {'states': {s_p: 1}}
-    elif s_p not in mdp.trans_history[(s, a)]['states']:
-        mdp.trans_history[(s, a)]['states'][s_p] = 1
-    else:
-        mdp.trans_history[(s, a)]['states'][s_p] += 1
-
-    if 'rewards' not in mdp.trans_history[(s, a)]:
-        mdp.trans_history[(s, a)]['rewards'] = []
-    mdp.trans_history[(s, a)]['rewards'].append(r)
-
-    if 'dones' not in mdp.trans_history[(s, a)]:
-        mdp.trans_history[(s, a)]['dones'] = []
-    mdp.trans_history[(s, a)]['dones'].append(d)
-
-    # fill in exit/entries if primitive
-    if mdp.level == 0:
-        if s != s_p:
-            exit = Exit(mdp, a, adj_mdp)
-            mdp.exits.add(exit)
-
 def aggregate_mdp_properties(mdps):
     for mdp in mdps:
         mdp.trans_probs = mdp.count_to_probs()
@@ -179,7 +112,12 @@ def get_mdp(mdps, level, s):
 
 def exec_action(env, mdps, mdp, state, exit, render=False):
     '''
-    action is {0, 1, 2, 3} if primitive and (state, action) if not
+    env:    gym environment
+    mdps:   dictionary of mdps
+    mdp:    particular mdp from where to execute action
+    state:  current state
+    exit:   primitive action if level = 0, Exit otherwise
+    render: if True, agent moves will be rendered 
     '''
 
     if mdp.level == 0:
