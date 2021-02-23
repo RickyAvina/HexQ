@@ -1,5 +1,6 @@
 import random
 import sys
+import numpy as np
 sys.path.append('.')
 
 
@@ -12,13 +13,6 @@ class Exit(object):
     def __repr__(self):
         return "mdp: {} -> (action: {}) -> next_mdp: {}".format(self.mdp.simple_rep(), self.action, self.next_mdp.simple_rep())
 
-    '''
-    def __eq__(self, other):
-        return self.mdp == other.mdp and self.next_mdp == other.next_mdp
-
-    def __hash__(self):
-        return hash(self.mdp) + hash(self.next_mdp)
-    '''
 
 class MDP(object):
     '''
@@ -50,6 +44,9 @@ class MDP(object):
 
     def simple_rep(self):
         return "level {} var {}".format(self.level, self.state_var)
+
+    def sv(self, freq):
+        return tuple(np.array(self.state_var)[freq[self.level:]])
 
     def __lt__(self, other):
         if self.level < other.level:

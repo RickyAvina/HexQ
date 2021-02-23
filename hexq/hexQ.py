@@ -54,7 +54,7 @@ class HexQ(object):
             for i in range(self.state_dim):
                 freq[i].add(state[i])
         sorted_order = np.argsort([len(arr) for arr in freq])
-        return sorted_order
+        return sorted_order[::-1]
 
     def test_policy(self):
         assert os.path.exists(self.args.binary_file), "file {} doesn't exist!".format(self.args.binary_file)
@@ -81,7 +81,10 @@ class HexQ(object):
         # most frequent variable is in the first order
         self.mdps[0] = set()
 
-        freq = self.find_freq()
+        self.freq = list(self.find_freq())
+        self.freq = [1, 0]
+
+        input("freq: " + str(self.freq))
         # state representation needs to be converted to frequency conversion
         # example state rep is (pos, gas)
         # TODO I guess line 2, 3, 4 in Table 5.1 are missing?! Woot woot?
@@ -169,9 +172,11 @@ class HexQ(object):
         for action in mdp.trans_history:
             if neighbor in mdp.trans_history[action]['states']:
                 # Condition 2
-                if neighbor.state_var[level:] != mdp.state_var[level:]:
+                #input("state var: {} freq_ordered: {}".format(neighbor.state_var, neighbor.sv(self.freq)))
+                #if neighbor.state_var[self.freq][level:] != mdp.state_var[self.freq][level:]:
+                #    return True, action, 2
+                if mdp.sv(self.freq)[level:] != neighbor.sv(self.freq)[level:]:
                     return True, action, 2
-
                 # Condition 1/5
                 if True in mdp.trans_history[action]['dones']:
                     return True, action, 1
