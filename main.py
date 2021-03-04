@@ -1,8 +1,9 @@
 import os
 import argparse
 import multiprocessing
-from gym_env import make_env
-from hexq.hexQ import HexQ
+#from gym_env import make_env
+#from hexq.hexQ import HexQ
+from train.trainer import train
 from misc.utils import set_log, restricted_float
 from tensorboardX import SummaryWriter
 from render.gui import GUI
@@ -46,12 +47,12 @@ def main(args):
         sys.exit()
 
 # TODO Please move train function into a new file (e.g., trainer.py)
-def train(args, gui):
-    # Make environment
-    env = make_env(args, gui)
+#def train(args, gui):
+#    # Make environment
+#    env = make_env(args, gui)
 
-    # Initialize HexQ algorithm
-    hq = HexQ(env=env, args=args)
+#   # Initialize HexQ algorithm
+#    hq = HexQ(env=env, args=args)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HeXQ")
