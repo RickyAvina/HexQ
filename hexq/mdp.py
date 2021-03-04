@@ -1,7 +1,6 @@
 import random
 import sys
 import numpy as np
-sys.path.append('.')
 
 
 class Exit(object):
@@ -46,7 +45,7 @@ class MDP(object):
         return "level {} var {}".format(self.level, self.state_var)
 
     def sv(self, freq):
-        return tuple(np.array(self.state_var)[freq[self.level:]])
+        return tuple([sv for _, sv in zip(freq, self.state_var)])
 
     def __lt__(self, other):
         if self.level < other.level:

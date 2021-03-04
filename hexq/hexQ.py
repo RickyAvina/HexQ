@@ -64,9 +64,10 @@ class HexQ(object):
         while True:
             # select greedy actions and reset if necessary
             s = self.env.reset()
-            mdp = get_mdp(mdps, 2, s)
+            mdp = get_mdp(mdps, self.args.state_dim, s)
+            
             # select best top level policy
-            max_q_val = -20
+            max_q_val = self.args.init_q
             best_exit = None
             for exit in mdp.policies:
                 max_q = max(mdp.policies[exit][s].values())
@@ -77,27 +78,15 @@ class HexQ(object):
             
     def alg(self):
         # Find freq ordering of vars and initialize lowest level mdps
-        # TODO that maybe sorting order needs to be opposite such that
-        # most frequent variable is in the first order
         self.mdps[0] = set()
 
         self.freq = list(self.find_freq())
-        self.freq = [1, 0]
 
-        input("freq: " + str(self.freq))
-        # state representation needs to be converted to frequency conversion
-        # example state rep is (pos, gas)
-        # TODO I guess line 2, 3, 4 in Table 5.1 are missing?! Woot woot?
-
-        # level zero (primitive actions)
-        # TODO Looking at the paper, it seems like they refer to the most bottom level to be
-        # level 1 instead of level 0
         for level in range(self.args.state_dim):
             self.explore(level=level, exploration_iterations=self.args.exploration_iterations)
             self.create_sub_mdps(level+1)
             self.train_sub_mdps(self.mdps[level+1])
         
-
         with open(self.args.binary_file, 'wb') as handle:
             pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)
         handle.close()

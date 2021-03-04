@@ -26,33 +26,32 @@ def main(args):
     # Please use them accordingly
     log = set_log(args)
     tb_writer = SummaryWriter('./logs/tb_{}'.format(args.log_name))
+    
+    if args.env == "GridEnv-v0":
+        if args.start is not None:
+            args.start = tuple(args.start)
 
-    if args.start is not None:
-        args.start = tuple(args.start)
+        args.target = tuple(args.target)
+        args.exits = Consts.EXITS
 
-    args.target = tuple(args.target)
-    args.exits = Consts.EXITS
+        gui = None
+        if args.render:
+            multiprocessing.set_start_method("spawn")
+            manager = multiprocessing.Manager()
+            queue = manager.Queue()
+            gui = GUI(args.gui_width, args.gui_height, args.rows, args.cols, args.x_rooms,
+                      args.y_rooms, args.target, args.exits, queue)
+        train(args, gui)
 
-    gui = None
-    if args.render:
-        multiprocessing.set_start_method("spawn")
-        manager = multiprocessing.Manager()
-        queue = manager.Queue()
-        gui = GUI(args.gui_width, args.gui_height, args.rows, args.cols, args.x_rooms,
-                  args.y_rooms, args.target, args.exits, queue)
-    train(args, gui)
+        if gui:
+            gui.process.join()
+            sys.exit()
 
-    if gui:
-        gui.process.join()
-        sys.exit()
+    elif args.env == "Taxi-v3":
+        train(args, None)
+    else:
+        raise ValueError("Environment {} not recognized".format(args.env))
 
-# TODO Please move train function into a new file (e.g., trainer.py)
-#def train(args, gui):
-#    # Make environment
-#    env = make_env(args, gui)
-
-#   # Initialize HexQ algorithm
-#    hq = HexQ(env=env, args=args)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HeXQ")
@@ -66,6 +65,9 @@ if __name__ == "__main__":
         help="Sets Gym, PyTorch, and Numpy seeds")
 
     # Environment Args
+    parser.add_argument(
+        '--env', default="", type=str,
+        help="Name of the environment")
     parser.add_argument(
         '--state_dim', default=2, type=int,
         help="Number of dimensions in the environment")
