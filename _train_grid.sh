@@ -35,7 +35,7 @@ python3 main.py \
 --init_q -10.0 \
 --lr 0.8 \
 --gamma 0.9 \
---epsilon 0.9 \
+--epsilon 1.0 \
 --epsilon_decay 0.999 \
 --min_epsilon 0.1 \
 --max_steps 500 \
