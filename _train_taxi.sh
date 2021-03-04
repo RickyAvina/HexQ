@@ -20,4 +20,6 @@ python3 -m pip install -r requirements.txt
 # Begin experiment
 print_header "Training network [Taxi]"
 python3 main.py \
---env "Taxi-v3"
+--env "Taxi-v4" \
+--prefix "" \
+--binary_file "binaries/taxi/mdps.pickle"

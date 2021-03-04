@@ -33,7 +33,7 @@ class HexQ(object):
         seq = [state]
 
         for _ in range(self.args.exploration_iterations*10):
-            action = np.random.randint(4)  # TODO Use env.action_space instead of hard-coding
+            action = np.random.randint(self.env.action_space.n)
             next_state, reward, done, info = self.env.step(action)
             seq.append(next_state)
             if done:
@@ -44,7 +44,7 @@ class HexQ(object):
         states = set(seq)
         for state in states:
             primitive_mdp = MDP(level=0, state_var=state)
-            primitive_mdp.exits = {0, 1, 2, 3}  # TODO Use env.action_space instead of hard-coding
+            primitive_mdp.exits = {x for x in range(self.env.action_space.n)}
             primitive_mdp.mer = frozenset({state})
             primitive_mdp.primitive_states = {state}
             self.mdps[0].add(primitive_mdp)

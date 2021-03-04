@@ -39,7 +39,7 @@ python3 main.py \
 --epsilon_decay 0.999 \
 --min_epsilon 0.1 \
 --max_steps 500 \
---binary_file "binaries/mdps.pickle" \
+--binary_file "binaries/gridworld/mdps.pickle" \
 --verbose \
 --render \
 --test

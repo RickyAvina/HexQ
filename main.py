@@ -47,7 +47,7 @@ def main(args):
             gui.process.join()
             sys.exit()
 
-    elif args.env == "Taxi-v3":
+    elif args.env == "Taxi-v4":
         train(args, None)
     else:
         raise ValueError("Environment {} not recognized".format(args.env))
