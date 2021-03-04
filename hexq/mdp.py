@@ -103,7 +103,16 @@ def get_mdp(mdps, level, s):
             sub_mdp = _sub_mdp
             break
 
-    assert sub_mdp is not None, "state {} does not belong to any sub MDP at level {}".format(s, level)
+    if sub_mdp is None:
+        # create mdp in level
+        if level == 0:
+            mdp = MDP(level=level, state_var=s)
+            mdp.exits = next(iter(mdps[level])).exits  # take exits from another MDP
+            mdp.primitive_states = {s}
+            mdps[level].add(mdp)
+            return mdp
+        else:
+            raise ValueError("state {} does not belong to any sub MDP at level {}".format(s, level))
     return sub_mdp
 
 def exec_action(env, mdps, mdp, state, exit, render=False):

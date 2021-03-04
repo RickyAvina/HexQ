@@ -40,7 +40,6 @@ class HexQ(object):
                 state = self.env.reset()
             else:
                 state = next_state
-
         states = set(seq)
         for state in states:
             primitive_mdp = MDP(level=0, state_var=state)
@@ -49,12 +48,18 @@ class HexQ(object):
             primitive_mdp.primitive_states = {state}
             self.mdps[0].add(primitive_mdp)
 
-        freq = [set() for _ in range(self.state_dim)]
+        freq = [{'sv': i, 'last': None, 'changes': 0} for i in range(self.state_dim)]
         for state in seq:
             for i in range(self.state_dim):
-                freq[i].add(state[i])
-        sorted_order = np.argsort([len(arr) for arr in freq])
-        return sorted_order[::-1]
+                if freq[i]['last'] is None:
+                    freq[i]['last'] = state[i]
+                else:
+                    if state[i] != freq[i]['last']:
+                        freq[i]['changes'] += 1
+                        freq[i]['last'] = state[i]
+
+        sorted_freq = sorted(freq, key=lambda x: x['changes'], reverse=True)
+        return [d['sv'] for d in sorted_freq]
 
     def test_policy(self):
         assert os.path.exists(self.args.binary_file), "file {} doesn't exist!".format(self.args.binary_file)
@@ -81,10 +86,13 @@ class HexQ(object):
         self.mdps[0] = set()
 
         self.freq = list(self.find_freq())
-
+        
         for level in range(self.args.state_dim):
             self.explore(level=level, exploration_iterations=self.args.exploration_iterations)
             self.create_sub_mdps(level+1)
+            for mdp in self.mdps[level+1]:
+                input(mdp)
+                input(mdp.adj)
             self.train_sub_mdps(self.mdps[level+1])
         
         with open(self.args.binary_file, 'wb') as handle:
@@ -183,6 +191,7 @@ class HexQ(object):
         mer.add(mdp)
         for neighbor in mdp.adj:
             found_exit, action, condition = self.is_exit(mdp, neighbor, level)
+            input("found exit: {} action: {} condition: {}".format(found_exit, action, condition))
             if found_exit:
                 exits.add((mdp, action, neighbor))
             else:

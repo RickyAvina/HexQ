@@ -20,6 +20,14 @@ MAP = [
     "+---------+",
 ]
 
+def categorical_sample(prob_n, np_random):
+    """
+    Sample from categorical distribution
+    Each row specifies class probabilities
+    """
+    prob_n = np.asarray(prob_n)
+    csprob_n = np.cumsum(prob_n)
+    return (csprob_n > np_random.rand()).argmax()
 
 class TaxiEnv(discrete.DiscreteEnv):
     """
@@ -152,6 +160,24 @@ class TaxiEnv(discrete.DiscreteEnv):
         out.append(i)
         assert 0 <= i < 5
         return reversed(out)
+
+    # New addition
+    def reset(self):
+        self.s = categorical_sample(self.isd, self.np_random)
+        self.lastaction = None
+        return tuple(self.decode(int(self.s)))
+    
+    def reset_in(self, states):
+        input(self.isd)
+
+    # New addition
+    def step(self, a):
+        transitions = self.P[self.s][a]
+        i = categorical_sample([t[0] for t in transitions], self.np_random)
+        p, s, r, d = transitions[i]
+        self.s = s
+        self.lastaction = a
+        return (tuple(self.decode(int(s))), r, d, {"prob": p})
 
     def render(self, mode='human'):
         outfile = StringIO() if mode == 'ansi' else sys.stdout
