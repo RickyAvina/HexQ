@@ -18,6 +18,8 @@ esac
 python3 -m pip install -r requirements.txt
 
 # Begin experiment
+# [TODO remove state_dim]
+
 print_header "Training network [GridEnv]"
 python3 main.py \
 --env "GridEnv-v0" \

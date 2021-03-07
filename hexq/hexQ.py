@@ -1,3 +1,7 @@
+"""
+The HexQ object is the functioning code of the HexQ algorithm.
+"""
+
 import random
 import policy.QLearn
 import numpy as np
@@ -12,8 +16,7 @@ class HexQ(object):
         self.start = args.start
         self.target = args.target
         self.args = args
-        self.mdps = {}  # level => [MDP,.. ]
-        self.state_dim = args.state_dim
+        self.mdps = {}                      # level => {MDP,.. }
         if self.args.test:
             self.test_policy()
         else:
@@ -24,7 +27,8 @@ class HexQ(object):
         After exploration, agent sorts variables based on their frequency of change.
 
         Returns:
-            sorted_order (np.ndarray): Sorted order of variables
+            state_dim    int          The number of dimensions of the state          
+            sorted_order (np.ndarray) Sorted order of variables
 
         References:
             Page 81 in the HexQ paper
@@ -79,10 +83,9 @@ class HexQ(object):
     def alg(self):
         # Find freq ordering of vars and initialize lowest level mdps
         self.mdps[0] = set()
-
         self.freq = list(self.find_freq())
 
-        for level in range(self.args.state_dim):
+        for level in range(self.args.state_dim):  # TODO remove state_dim
             self.explore(level=level, exploration_iterations=self.args.exploration_iterations)
             self.create_sub_mdps(level+1)
             self.train_sub_mdps(self.mdps[level+1])
@@ -161,11 +164,9 @@ class HexQ(object):
         for action in mdp.trans_history:
             if neighbor in mdp.trans_history[action]['states']:
                 # Condition 2
-                #input("state var: {} freq_ordered: {}".format(neighbor.state_var, neighbor.sv(self.freq)))
-                #if neighbor.state_var[self.freq][level:] != mdp.state_var[self.freq][level:]:
-                #    return True, action, 2
                 if mdp.sv(self.freq)[level:] != neighbor.sv(self.freq)[level:]:
                     return True, action, 2
+                
                 # Condition 1/5
                 if True in mdp.trans_history[action]['dones']:
                     return True, action, 1

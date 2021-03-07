@@ -31,9 +31,6 @@ def qlearn(env, mdps, mdp, args):
             print("finding policy for exit: {}".format(exit))
 
         mdp.policies[exit] = dict()
-        #input("exit: {}".format(exit))
-        #if mdp.level > 1:
-        #    input("exit: " + str(exit))
         for sub_mdp in mdp.mer:
             for primitive_state in sub_mdp.primitive_states:
                 #input("prim state: {}".format(primitive_state))
@@ -41,15 +38,6 @@ def qlearn(env, mdps, mdp, args):
                 for action in sub_mdp.exits:
                     mdp.policies[exit][primitive_state][action] = args.init_q  # Initialize Q-Vals
 
-            '''
-            mdp.policies[exit][sub_mdp] = dict()
-            #if mdp.level > 1:
-            #    input("sub_mdp: " + str(sub_mdp))
-            for action in sub_mdp.exits:
-                mdp.policies[exit][sub_mdp][action] = args.init_q  # Initialize Q-Vals
-                #if mdp.level > 1:
-                #    input("action: " + str(action))
-            '''
         decay_count = 0
  
         for step in tqdm(range(args.exploration_iterations//mdp.level), disable=(not args.verbose)):

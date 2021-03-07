@@ -27,7 +27,7 @@ class MDP(object):
 
         self.trans_history = {}  # (s, a) -> {'states':  {s_p: count, s_p': count'}}
                                              #'rewards': {r, r', ...}
-                                             # 'dones':   {d, d', ...}
+                                             # 'dones':  {d, d', ...}
 
         self.adj = set()
         self.trans_probs = None
