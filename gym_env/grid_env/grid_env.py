@@ -5,7 +5,7 @@ from misc.utils import random_exclude
 
 
 class GridEnv(gym.Env):
-    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, state_dim, target, exits, start=None, gui=None):
+    def __init__(self, rows, cols, x_rooms, y_rooms, n_action, target, exits, start=None, gui=None):
         '''
         target loc: tuple representing target. (1,2,3) would mean Floor 3, Room 2, pos 1
                     (2, 3) would mean room 2, floor 3
@@ -18,7 +18,6 @@ class GridEnv(gym.Env):
         self.cols = cols
         self.x_rooms = x_rooms
         self.y_rooms = y_rooms
-        self.state_dim = state_dim
         self.target = target
         if start is None:
             self.start = self.get_random_start()
@@ -38,7 +37,7 @@ class GridEnv(gym.Env):
         elif len(self.target) == 2:
             return self.agent_loc == self.target
         else:
-            raise ValueError("state dim: {} not supported!".format(self.state_dim))
+            raise ValueError("state dim: {} not supported!".format(len(self.target)))
 
     def step(self, action):
         assert self.agent_loc is not None, "agent loc is None!"

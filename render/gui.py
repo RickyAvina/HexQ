@@ -169,7 +169,7 @@ class Event():
         return "kind: {}\ndata: {}".format(self.kind, self.data)
 
 class GUI():
-    def __init__(self, width, height, rows, cols, x_rooms, y_rooms, target, exits, queue):
+    def __init__(self, width, height, rows, cols, x_rooms, y_rooms, target, exits, queue, log, log_name):
         self.width = width
         self.height = height
         self.rows = rows
@@ -179,6 +179,8 @@ class GUI():
         self.target = target
         self.exits = exits
         self.queue = queue
+        self.log = log
+        self.log_name = log_name
         self.done = False
         self.process = multiprocessing.Process(target=self.start, args=(queue,))
         self.process.start()
@@ -194,39 +196,44 @@ class GUI():
 
         self.run = True
         clock = pygame.time.Clock()
+        
+        try:
+            while self.run:
+                clock.tick(Consts.FPS)
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.run = False
+                        break
 
-        while self.run:
-            clock.tick(Consts.FPS)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.run = False
-                    break
-
-            if not queue.empty():
-                event = queue.get()
-                if event.kind == EventType.QVAL:
-                    exit_square = self.get_square(event.data['exit'])
-                    exit_square.color = Consts.RED
-                    arrow_squares = self.add_arrows(event.data['states'])
-                    self.container.render()
-                    pygame.display.update()
+                if not queue.empty():
+                    event = queue.get()
+                    if event.kind == EventType.QVAL:
+                        exit_square = self.get_square(event.data['exit'])
+                        exit_square.color = Consts.RED
+                        arrow_squares = self.add_arrows(event.data['states'])
+                        self.container.render()
+                        pygame.display.update()
+                        
+                        # wait for click
+                        self.wait_for_click()
+                        
+                        # reset squares
+                        exit_square.color = Consts.GREEN
+                        for square in arrow_squares:
+                            square.arrow = None
                     
-                    # wait for click
-                    self.wait_for_click()
-                    
-                    # reset squares
-                    exit_square.color = Consts.GREEN
-                    for square in arrow_squares:
-                        square.arrow = None
-                
-                if event.kind == EventType.POS:
-                    self.container.render()
-                    self.agent.render(event.data)
-                    pygame.display.update()
-                    
-                    # wait for click (could be made a cli arg) 
-                    self.wait_for_click() 
-        pygame.quit()
+                    if event.kind == EventType.POS:
+                        self.container.render()
+                        self.agent.render(event.data)
+                        pygame.display.update()
+                        
+                        # wait for click (could be made a cli arg) 
+                        self.wait_for_click() 
+            pygame.quit()
+        except Exception as e:
+            # log error and quietly exit
+            self.log[self.log_name].error("[GUI] encountered error: {}".format(e))
+            pygame.quit()
 
     def get_square(self, coord):
         room_row = coord[1] // self.container.x_rooms

@@ -1,8 +1,6 @@
 import os
 import argparse
 import multiprocessing
-#from gym_env import make_env
-#from hexq.hexQ import HexQ
 from train.trainer import train
 from misc.utils import set_log, restricted_float
 from tensorboardX import SummaryWriter
@@ -14,6 +12,13 @@ import pathlib
 
 
 def main(args):
+    """
+    Program entry point
+
+    Arguments
+    args (argparse.Namespace) command-line arguments
+    """
+
     # Create directories
     if not os.path.exists("./logs"):
         os.makedirs("./logs")
@@ -22,11 +27,9 @@ def main(args):
     pathlib.Path(args.binary_file).parents[0].mkdir(parents=False, exist_ok=True)
 
     # Set logging
-    # TODO log and tb_writer variables are not used.
-    # Please use them accordingly
     log = set_log(args)
     tb_writer = SummaryWriter('./logs/tb_{}'.format(args.log_name))
-    
+ 
     if args.env == "GridEnv-v0":
         if args.start is not None:
             args.start = tuple(args.start)
@@ -40,14 +43,14 @@ def main(args):
             manager = multiprocessing.Manager()
             queue = manager.Queue()
             gui = GUI(args.gui_width, args.gui_height, args.rows, args.cols, args.x_rooms,
-                      args.y_rooms, args.target, args.exits, queue)
-        train(args, gui)
+                      args.y_rooms, args.target, args.exits, queue, log, args.log_name)
+        train(args, gui, log, tb_writer)
 
         if gui:
             gui.process.join()
             sys.exit()
 
-    elif args.env == "Taxi-v3":
+    elif args.env == "Taxi-v4":
         train(args, None)
     else:
         raise ValueError("Environment {} not recognized".format(args.env))
@@ -68,9 +71,6 @@ if __name__ == "__main__":
     parser.add_argument(
         '--env', default="", type=str,
         help="Name of the environment")
-    parser.add_argument(
-        '--state_dim', default=2, type=int,
-        help="Number of dimensions in the environment")
     parser.add_argument(
         '--rows', default=5, type=int,
         help="Number of rows in every room")
@@ -138,6 +138,6 @@ if __name__ == "__main__":
         help='If set, algorithm will test policy stored at `binary_file`')
 
     args = parser.parse_args()
-    args.log_name = "env:GridWorld-v0-s_prefix::%s" % (args.prefix)
+    args.log_name = "env:GridWorld-v0::%s" % (args.prefix)
     logging.basicConfig(level='INFO')
     main(args=args)

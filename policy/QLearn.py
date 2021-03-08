@@ -3,7 +3,7 @@ from hexq.mdp import get_mdp, exec_action
 from tqdm import tqdm
 
 
-def qlearn(env, mdps, mdp, args):
+def qlearn(env, mdps, mdp, args, log, tb_writer):
     '''
     Implements Q-Learning to help agents find a policy to reach all
     of the exits in an mdp. Fills in an mdp's policy attribute which has the form:
@@ -15,10 +15,12 @@ def qlearn(env, mdps, mdp, args):
         exit_mdp': {...}}
 
     Arguments:
-        env: Gym env
-        mdps: All MDPs in the hierarchy
-        mdp: particular sub-mdp to train
-        args: command-line args
+        env      : Gym env
+        mdps     : All MDPs in the hierarchy
+        mdp      : particular sub-mdp to train
+        args     : command-line args
+        log      : debug log
+        tb_writer: Tensorboard graph
 
     Returns:
         A dictionary mapping states to arrows for rendering of the form:
@@ -28,12 +30,13 @@ def qlearn(env, mdps, mdp, args):
 
     for exit in mdp.exits:
         if args.verbose:
-            print("finding policy for exit: {}".format(exit))
-
+            log[args.log_name].info("finding policy for exit: {}".format(exit))
+        
+        # Derive a policy for each exit
         mdp.policies[exit] = dict()
         for sub_mdp in mdp.mer:
+            # Store a Q-Value for every state in the MER
             for primitive_state in sub_mdp.primitive_states:
-                #input("prim state: {}".format(primitive_state))
                 mdp.policies[exit][primitive_state] = dict()
                 for action in sub_mdp.exits:
                     mdp.policies[exit][primitive_state][action] = args.init_q  # Initialize Q-Vals
@@ -48,20 +51,27 @@ def qlearn(env, mdps, mdp, args):
             decay_count += 1
             history = []
             steps_taken = 0
+            epsilon = args.epsilon
 
-            # exit is {l1 mdp: action: {l0 mdp -> prim action -> l0 mdp}: l1 mdp}
+            # pick actions from level-1 until mdp transitions reaches the exit
             while sub_mdp != exit.action.next_mdp:
                 if steps_taken > args.max_steps:
                     break
-                a = get_action(sub_mdp, 0.5+decay_count/(2*args.exploration_iterations), mdp.policies[exit][s])
+
+                # pick an action from sub_mdp using an eps greedy strategy
+                a = get_action(sub_mdp, epsilon, mdp.policies[exit][s])
+                epsilon = max(args.min_epsilon, epsilon*args.epsilon_decay)
+
+                # execute hierarchical action
                 s_p, r, d, info = exec_action(env, mdps, sub_mdp, s, a)
                 next_sub_mdp = get_mdp(mdps, mdp.level-1, s_p)
-                #input("{} --> {} --> {} r: {} d: {}".format(sub_mdp, "some action", next_sub_mdp, r, d))
                 if next_sub_mdp not in mdp.mer:
+                    # reward agent for reaching the exit
                     if next_sub_mdp == exit.action.next_mdp:
                         r = 0
                         d = True
                     else:
+                        # penalize agent for exiting to the wrong MDP
                         r = -100
                         next_sub_mdp = sub_mdp
                         break
@@ -73,25 +83,61 @@ def qlearn(env, mdps, mdp, args):
                 steps_taken += 1
 
             if len(history) > 0:
-                update_q_vals(args, mdp.policies[exit], history)
+                tb_writer.add_scalar('cum_reward_{}'.format(name_replace(exit)), cum_reward, step)
+                update_q_vals(args, mdp.policies[exit], history, tb_writer)
     
     if mdp.level == 1:
         return get_arrows(mdp.policies)
     else:
         return [] 
 
+def name_replace(exit):
+    s = str(exit)
+    for r in ((" ", ""), ("(", "_"), (")", "_"), (">", "-"), (":", "-"), (",", "_")):
+        s = s.replace(*r)
+    return s
+
 def max_q(exit_qvals):
+    """
+    Get the best action from Q-Values
+
+    Arguments:
+    exit_qvals {action: q}
+
+    Returns
+    action (Exit) the best action to take
+    """
     return max(exit_qvals, key=lambda k: exit_qvals.get(k))
 
 def get_action(mdp, p, exit_qvals):
-    if random.random() > p:
+    """
+    Select a eps-greedy action
+
+    Arguments
+    p          (Float [0-1]) the probability of selecting a random action
+    exit_qvals (dict {a: p}) q-values for a state and exit
+    
+    Returns
+    action (Exit) best action or random action
+    """
+
+    if random.random() < p:
         return mdp.select_random_action()
     else:
         # return choice with highest q val
         action = max_q(exit_qvals)
         return action
 
-def update_q_vals(args, exit_qvals, history):
+def update_q_vals(args, exit_qvals, history, tb_writer):
+    """
+    Update Q-values for `exit_qvals`
+
+    Arguments
+    exit_qvals (dict {a: p})               q-values for a state and exit
+    history    (Array)                     array of (s, a, next state, r, d) tuples
+    tb_writer  (Tensorboard.SummaryWriter) tensorboard log
+    """
+
     local_history = history.copy()
     local_history.reverse()
 
@@ -109,10 +155,10 @@ def get_arrows(qvals):
     Get arrows asosciated with Q-Values
 
     Arguments:
-        qvals: {exit: {state: {action: q, ...}}}
+        qvals (dictionary) {exit: {state: {action: q, ...}}}
 
     Returns:
-        {state: [0-4], ...}
+        res  (dictionary) {state: [0-4], ...}
         Where 0 = left, 1 = right, 2 = up, 3 = right
     '''
 

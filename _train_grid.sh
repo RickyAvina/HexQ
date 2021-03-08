@@ -18,13 +18,10 @@ esac
 python3 -m pip install -r requirements.txt
 
 # Begin experiment
-# [TODO remove state_dim]
-
 print_header "Training network [GridEnv]"
 python3 main.py \
 --env "GridEnv-v0" \
 --prefix "" \
---state_dim 2 \
 --rows 5 \
 --cols 5 \
 --x_rooms 2 \
@@ -36,12 +33,11 @@ python3 main.py \
 --exploration_iterations 10000 \
 --init_q -10.0 \
 --lr 0.8 \
---gamma 0.9 \
---epsilon 1.0 \
+--gamma 1.0 \
+--epsilon 0.9 \
 --epsilon_decay 0.999 \
 --min_epsilon 0.1 \
 --max_steps 500 \
---binary_file "binaries/mdps.pickle" \
+--binary_file "binaries/gridworld/mdps.pickle" \
 --verbose \
---render \
---test
+--render 
