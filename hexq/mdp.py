@@ -1,6 +1,4 @@
 import random
-import sys
-import numpy as np
 
 
 class Exit(object):
@@ -63,7 +61,7 @@ class MDP(object):
         # fill adjacency set
         if self != next_mdp:
             self.adj.add(next_mdp)  # directed edge
-        
+
         # fill in trans history
         if a not in self.trans_history:
             self.trans_history[a] = {'states': {next_mdp: 1}}
@@ -71,7 +69,7 @@ class MDP(object):
             self.trans_history[a]['states'][next_mdp] = 1
         else:
             self.trans_history[a]['states'][next_mdp] += 1
-        
+
         if 'rewards' not in self.trans_history[a]:
             self.trans_history[a]['rewards'] = []
         self.trans_history[a]['rewards'].append(r)
@@ -122,7 +120,7 @@ def exec_action(env, mdps, mdp, state, exit, render=False):
     mdp:    particular mdp from where to execute action
     state:  current state
     exit:   primitive action if level = 0, Exit otherwise
-    render: if True, agent moves will be rendered 
+    render: if True, agent moves will be rendered
     '''
 
     if mdp.level == 0:
@@ -133,6 +131,10 @@ def exec_action(env, mdps, mdp, state, exit, render=False):
 
     s_p, d, info = state, False, dict()
     cumm_reward = 0
+
+    if render:
+        root_action = get_root_action(exit)
+        env.gui.show_exit(root_action.mdp.state_var)
 
     while mdp != exit.next_mdp:
         sub_mdp = get_mdp(mdps, mdp.level-1, state)
@@ -145,6 +147,10 @@ def exec_action(env, mdps, mdp, state, exit, render=False):
 
     return s_p, cumm_reward, d, info
 
-
+def get_root_action(exit):
+    if exit.mdp.level == 0:
+        return exit
+    else:
+        return get_root_action(exit.action)
 def max_q(exit_qvals):
     return max(exit_qvals, key=lambda k: exit_qvals.get(k))

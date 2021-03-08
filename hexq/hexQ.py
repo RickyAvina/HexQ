@@ -35,12 +35,12 @@ class HexQ(object):
         assert os.path.exists(self.args.binary_file), "file {} doesn't exist!".format(self.args.binary_file)
         pickle_dict = open(self.args.binary_file, 'rb')
         mdps = pickle.load(pickle_dict)
-        
+
         while True:
             # select greedy actions and reset if necessary
             s = self.env.reset()
-            mdp = get_mdp(mdps, self.state_dim, s)
-            
+            mdp = get_mdp(mdps, len(s), s)
+
             # select best top level policy
             max_q_val = self.args.init_q
             best_exit = None
@@ -50,13 +50,13 @@ class HexQ(object):
                     max_q_val = max_q
                     best_exit = exit
             s_p, r, d, info = exec_action(self.env, mdps, mdp, s, best_exit, True)
-    
+
     def find_freq(self):
         """Agent randomly explores env randomly for period of time.
         After exploration, agent sorts variables based on their frequency of change.
 
         Returns:
-            state_dim    (int)          The number of dimensions of the state          
+            state_dim    (int)          The number of dimensions of the state
             sorted_order (np.ndarray) Sorted order of variables, if our state is (pos, room, floor)
                                       [1, 0, 2] means room changes the most frequently and floor change
                                       the least frequently
@@ -108,8 +108,8 @@ class HexQ(object):
 
         # Find freq ordering of vars and initialize lowest level mdps
         self.mdps[0] = set()
-        self.freq, self.state_dim  = self.find_freq()
-       
+        self.freq, self.state_dim = self.find_freq()
+
         # Build the task hierarchy
         for level in range(self.state_dim):
             # Randomly execute actions from level and fill MDP properties (trans prob, adj, etc)
@@ -118,7 +118,7 @@ class HexQ(object):
             self.create_sub_mdps(level+1)
             # Train a policy to reach every exit in the MDPs at level+1
             self.train_sub_mdps(self.mdps[level+1])
-        
+
         # Serialize the MDPs
         with open(self.args.binary_file, 'wb') as handle:
             pickle.dump(self.mdps, handle, protocol=pickle.HIGHEST_PROTOCOL)

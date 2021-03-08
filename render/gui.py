@@ -1,8 +1,9 @@
 import render.render_consts as Consts
-import multiprocessing
+import multiprocessing, logging
 import pygame
 import sys
 import enum
+from misc.utils import get_multi_logger
 
 
 class Agent:
@@ -159,6 +160,8 @@ class EventType(enum.Enum):
     QUIT = 0
     QVAL = 1
     POS  = 2
+    EXIT = 3
+
 
 class Event():
     def __init__(self, kind, data):
@@ -168,8 +171,9 @@ class Event():
     def __repr__(self):
         return "kind: {}\ndata: {}".format(self.kind, self.data)
 
+
 class GUI():
-    def __init__(self, width, height, rows, cols, x_rooms, y_rooms, target, exits, queue, log, log_name):
+    def __init__(self, width, height, rows, cols, x_rooms, y_rooms, target, exits, queue):
         self.width = width
         self.height = height
         self.rows = rows
@@ -179,8 +183,6 @@ class GUI():
         self.target = target
         self.exits = exits
         self.queue = queue
-        self.log = log
-        self.log_name = log_name
         self.done = False
         self.process = multiprocessing.Process(target=self.start, args=(queue,))
         self.process.start()
@@ -191,12 +193,13 @@ class GUI():
         pygame.display.set_caption('Room Env')
         self.container = Container(self.WIN, self.width, self.height, self.rows, self.cols, self.x_rooms, self.y_rooms, self.target, self.exits)
         self.agent = Agent(self.rows, self.cols)
+        self.last_square = None
         self.container.render()
         pygame.display.update()
 
         self.run = True
         clock = pygame.time.Clock()
-        
+
         try:
             while self.run:
                 clock.tick(Consts.FPS)
@@ -213,26 +216,34 @@ class GUI():
                         arrow_squares = self.add_arrows(event.data['states'])
                         self.container.render()
                         pygame.display.update()
-                        
+
                         # wait for click
                         self.wait_for_click()
-                        
+
                         # reset squares
                         exit_square.color = Consts.GREEN
                         for square in arrow_squares:
                             square.arrow = None
-                    
+
                     if event.kind == EventType.POS:
                         self.container.render()
                         self.agent.render(event.data)
                         pygame.display.update()
-                        
-                        # wait for click (could be made a cli arg) 
-                        self.wait_for_click() 
+
+                        # wait for click (could be made a cli arg)
+                        self.wait_for_click()
+
+                    if event.kind == EventType.EXIT:
+                        if self.last_square is not None:
+                            self.last_square.color = Consts.WHITE
+                        self.last_square = self.get_square(event.data)
+                        self.last_square.color = Consts.ORANGE
+                        self.container.render()
+                        pygame.display.update()
             pygame.quit()
+
         except Exception as e:
             # log error and quietly exit
-            self.log[self.log_name].error("[GUI] encountered error: {}".format(e))
             pygame.quit()
 
     def get_square(self, coord):
@@ -251,6 +262,9 @@ class GUI():
     def render_agent(self, loc):
         self.queue.put(Event(EventType.POS, loc))
 
+    def show_exit(self, sv):
+        self.queue.put(Event(EventType.EXIT, sv))
+
     def add_arrows(self, q_values):
         '''
         q_values are in format {state_var, arrow}
@@ -262,7 +276,7 @@ class GUI():
             squares.append(square)
         return squares
 
-    def wait_for_click(self): 
+    def wait_for_click(self):
         skip = False
         while not skip:
             for event in pygame.event.get():

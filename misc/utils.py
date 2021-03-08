@@ -2,6 +2,7 @@ import git
 import logging
 import random
 import argparse
+import multiprocessing
 
 
 def random_exclude(exclude, low, high):
@@ -21,6 +22,20 @@ def restricted_float(x):
         raise argparse.ArgumentError("%r is not in the range [0.0, 1.0]" % (x,))
 
     return x
+
+def get_multi_logger(log_name, level=logging.INFO):
+    logger = multiprocessing.get_logger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter(\
+        '[%(asctime)s| %(levelname)s| %(processName)s] %(message)s')
+    handler = logging.FileHandler('{}_gui.log'.format(log_name))
+    handler.setFormatter(formatter)
+
+    # this bit will make sure you won't have
+    # duplicated messages in the output
+    if not len(logger.handlers):
+        logger.addHandler(handler)
+    return logger
 
 def set_logger(logger_name, log_file, level=logging.INFO):
     log = logging.getLogger(logger_name)

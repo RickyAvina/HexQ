@@ -29,7 +29,7 @@ def main(args):
     # Set logging
     log = set_log(args)
     tb_writer = SummaryWriter('./logs/tb_{}'.format(args.log_name))
- 
+
     if args.env == "GridEnv-v0":
         if args.start is not None:
             args.start = tuple(args.start)
@@ -43,7 +43,7 @@ def main(args):
             manager = multiprocessing.Manager()
             queue = manager.Queue()
             gui = GUI(args.gui_width, args.gui_height, args.rows, args.cols, args.x_rooms,
-                      args.y_rooms, args.target, args.exits, queue, log, args.log_name)
+                      args.y_rooms, args.target, args.exits, queue)
         train(args, gui, log, tb_writer)
 
         if gui:
