@@ -116,6 +116,12 @@ class HexQ(object):
             self.explore(level=level, exploration_iterations=self.args.exploration_iterations)
             # Using MDP properties, find exits, MERs, and form MDPs at level+1
             self.create_sub_mdps(level+1)
+            
+            for mdp in self.mdps[level+1]:
+                if len(mdp.exits) == 0:
+                    input("mdp: {} mer: {}".format(mdp, mdp.mer))
+                    for s_mdp in mdp.mer:
+                        input("sub mdp: {} actions: {}".format(s_mdp, s_mdp.exits))
             # Train a policy to reach every exit in the MDPs at level+1
             self.train_sub_mdps(self.mdps[level+1])
 
@@ -132,7 +138,7 @@ class HexQ(object):
 
         Arguments:
         level                  (Int) level to explore (0 is lowest)
-        exploration_iterations (Int) the amount of transitions to sample 
+        exploration_iterations (Int) the amount of transitions to sample
         """
 
         s = self.env.reset()
@@ -174,6 +180,7 @@ class HexQ(object):
             mer, exits = set(), set()
             # Group curr_mdp with neighbors to form a MER and find exits
             self.dfs(mdps_copy, curr_mdp, level, mer, exits)
+
             # Choose a state var that is representative of the new MER
             state_var = next(iter(mer)).state_var[1:]
             # Create a new upper level MDP and set its properties
@@ -192,7 +199,7 @@ class HexQ(object):
             mdp.exits = set()
             # Generate new exits (mdp at level, Exit at level-1, target mdp at level)
             for s_mdp, exit, n_mdp in upper_level_exits[mdp]:
-                neighbor_mdp = n_mdp.get_upper_mdp(self.mdps) 
+                neighbor_mdp = n_mdp.get_upper_mdp(self.mdps)
                 mdp.exits.add(Exit(mdp, Exit(s_mdp, exit, n_mdp), neighbor_mdp))
 
     def is_exit(self, mdp, neighbor, level):
@@ -204,7 +211,7 @@ class HexQ(object):
         mdp      (MDP)  a mdp at level `level`
         neighbor (MDP)  a different mdp at level `level`
         level    (Int)  the level of mdp and neighbor
-        
+
         Returns:
             _      (bool)   True if an exit exits
             action (Exit)   Exit at level-1 if an exit exits, None otherwise
@@ -216,9 +223,9 @@ class HexQ(object):
         3: has a non-stationary trans function
         4: has a non-stationary reward function
         5: transitions between MERs
-        
+
         References:
-        Page 84 
+        Page 84
         """
 
         for action in mdp.trans_history:
@@ -226,7 +233,7 @@ class HexQ(object):
                 # Condition 2
                 if mdp.sv(self.freq)[level:] != neighbor.sv(self.freq)[level:]:
                     return True, action, 2
-                
+
                 # Condition 1/5
                 if True in mdp.trans_history[action]['dones']:
                     return True, action, 1
@@ -250,7 +257,7 @@ class HexQ(object):
         mer      (set{MDP})  Markov Equivalent Reigion
         exits    (set{Exit}) exits associated with mer
         """
-        
+
         # Only consider an MDP once in DFS
         if mdp in mdp_list:
             mdp_list.remove(mdp)
@@ -267,7 +274,7 @@ class HexQ(object):
                     self.dfs(mdp_list, neighbor, level, mer, exits)
 
     def train_sub_mdps(self, mdps):
-        """ 
+        """
         Train a policy to reach every exit for each mdp in mdps. Render policy if applicable
 
         Arguments:

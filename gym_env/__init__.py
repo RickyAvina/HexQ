@@ -21,7 +21,8 @@ def make_env(args, gui):
             x_rooms=args.x_rooms, y_rooms=args.y_rooms, n_action=4,
             start=args.start, target=args.target, exits=args.exits, gui=gui)
     elif args.env == "Taxi-v4":
-        env = gym.make("Taxi-v4")
+        env = gym.make("Taxi-v4",
+            gui=gui)
     else:
         raise ValueError("Environment {} not recognized!".format(args.env))
     return env

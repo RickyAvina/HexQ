@@ -31,7 +31,7 @@ def qlearn(env, mdps, mdp, args, log, tb_writer):
     for exit in mdp.exits:
         if args.verbose:
             log[args.log_name].info("finding policy for exit: {}".format(exit))
-        
+
         # Derive a policy for each exit
         mdp.policies[exit] = dict()
         for sub_mdp in mdp.mer:
@@ -42,7 +42,7 @@ def qlearn(env, mdps, mdp, args, log, tb_writer):
                     mdp.policies[exit][primitive_state][action] = args.init_q  # Initialize Q-Vals
 
         decay_count = 0
- 
+
         for step in tqdm(range(args.exploration_iterations//mdp.level), disable=(not args.verbose)):
             # initialize pos in MER
             s = env.reset_in(mdp.primitive_states)
@@ -85,11 +85,11 @@ def qlearn(env, mdps, mdp, args, log, tb_writer):
             if len(history) > 0:
                 tb_writer.add_scalar('cum_reward_{}'.format(name_replace(exit)), cum_reward, step)
                 update_q_vals(args, mdp.policies[exit], history, tb_writer)
-    
+
     if mdp.level == 1:
         return get_arrows(mdp.policies)
     else:
-        return [] 
+        return []
 
 def name_replace(exit):
     s = str(exit)
@@ -116,7 +116,7 @@ def get_action(mdp, p, exit_qvals):
     Arguments
     p          (Float [0-1]) the probability of selecting a random action
     exit_qvals (dict {a: p}) q-values for a state and exit
-    
+
     Returns
     action (Exit) best action or random action
     """

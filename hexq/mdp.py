@@ -139,6 +139,12 @@ def exec_action(env, mdps, mdp, state, exit, render=False):
     while mdp != exit.next_mdp:
         sub_mdp = get_mdp(mdps, mdp.level-1, state)
         # get best action according to q-values
+
+        # create new policy entry for missing state (could be useful to fill in MDP properties now)
+        if state not in mdp.policies[exit]:
+            mdp.policies[exit][state] = dict()
+            for action in state.exits:
+                mdp.policies[exit][action] = -10
         best_action = max_q(mdp.policies[exit][state])
         s_p, r, d, info = exec_action(env, mdps, sub_mdp, state, best_action, render)
         cumm_reward += r
@@ -152,5 +158,6 @@ def get_root_action(exit):
         return exit
     else:
         return get_root_action(exit.action)
+
 def max_q(exit_qvals):
     return max(exit_qvals, key=lambda k: exit_qvals.get(k))

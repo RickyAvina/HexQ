@@ -9,6 +9,7 @@ from io import StringIO
 from gym import utils
 from gym.envs.toy_text import discrete
 import numpy as np
+import random
 
 MAP = [
     "+---------+",
@@ -80,9 +81,9 @@ class TaxiEnv(discrete.DiscreteEnv):
     """
     metadata = {'render.modes': ['human', 'ansi']}
 
-    def __init__(self):
+    def __init__(self, gui):
         self.desc = np.asarray(MAP, dtype='c')
-
+        self.gui = gui
         self.locs = locs = [(0, 0), (0, 4), (4, 0), (4, 3)]
 
         num_states = 500
@@ -166,9 +167,12 @@ class TaxiEnv(discrete.DiscreteEnv):
         self.s = categorical_sample(self.isd, self.np_random)
         self.lastaction = None
         return tuple(self.decode(int(self.s)))
-    
+
     def reset_in(self, states):
-        input(self.isd)
+        random_state = random.choice(tuple(states))
+        self.lastaction = None
+        self.s = self.encode(random_state[0], random_state[1], random_state[2], random_state[3])
+        return random_state
 
     # New addition
     def step(self, a):

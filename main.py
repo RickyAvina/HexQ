@@ -30,14 +30,15 @@ def main(args):
     log = set_log(args)
     tb_writer = SummaryWriter('./logs/tb_{}'.format(args.log_name))
 
-    if args.env == "GridEnv-v0":
-        if args.start is not None:
-            args.start = tuple(args.start)
+    if args.start is not None:
+        args.start = tuple(args.start)
+    
+    gui = None
 
+    if args.env == "GridEnv-v0":
         args.target = tuple(args.target)
         args.exits = Consts.EXITS
 
-        gui = None
         if args.render:
             multiprocessing.set_start_method("spawn")
             manager = multiprocessing.Manager()
@@ -51,7 +52,7 @@ def main(args):
             sys.exit()
 
     elif args.env == "Taxi-v4":
-        train(args, None)
+        train(args, None, log, tb_writer)
     else:
         raise ValueError("Environment {} not recognized".format(args.env))
 
