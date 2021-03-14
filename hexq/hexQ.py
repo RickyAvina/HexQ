@@ -116,12 +116,13 @@ class HexQ(object):
             self.explore(level=level, exploration_iterations=self.args.exploration_iterations)
             # Using MDP properties, find exits, MERs, and form MDPs at level+1
             self.create_sub_mdps(level+1)
-            
+            ''' 
             for mdp in self.mdps[level+1]:
                 if len(mdp.exits) == 0:
                     input("mdp: {} mer: {}".format(mdp, mdp.mer))
                     for s_mdp in mdp.mer:
                         input("sub mdp: {} actions: {}".format(s_mdp, s_mdp.exits))
+            '''
             # Train a policy to reach every exit in the MDPs at level+1
             self.train_sub_mdps(self.mdps[level+1])
 
